@@ -6,6 +6,7 @@ from models.fact import Fact
 from schemas import (
     PaginatedResponse,
     FactResponse,
+    FactCreate,
     FactFilter,
     ReviewUpdate,
     SuccessResponse,
@@ -73,6 +74,18 @@ async def list_facts(
         page_size=page_size,
         total_pages=total_pages,
     )
+
+
+@router.post("/", response_model=FactResponse, status_code=201)
+async def create_fact(
+    data: FactCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    fact = Fact(**data.model_dump())
+    session.add(fact)
+    await session.commit()
+    await session.refresh(fact)
+    return FactResponse.model_validate(fact)
 
 
 @router.get("/{fact_id}", response_model=FactResponse)

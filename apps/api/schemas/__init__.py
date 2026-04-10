@@ -23,6 +23,7 @@ from .raw_record import (
     RawRecordCreate,
     RawRecordFilter,
     RawRecordResponse,
+    RawRecordStatusUpdate,
 )
 from .source import (
     SourceCreate,
@@ -45,6 +46,7 @@ __all__ = [
     "RawRecordCreate",
     "RawRecordResponse",
     "RawRecordFilter",
+    "RawRecordStatusUpdate",
     "FactCreate",
     "FactUpdate",
     "FactResponse",

@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.raw_record import RawRecord
-from schemas import PaginatedResponse, RawRecordResponse, RawRecordFilter
+from schemas import PaginatedResponse, RawRecordResponse, RawRecordFilter, RawRecordStatusUpdate, SuccessResponse
 from services import get_session
 from utils.helpers import get_paginated
 
@@ -69,3 +69,27 @@ async def get_raw_record(
     if not record:
         raise HTTPException(status_code=404, detail="Raw record not found")
     return RawRecordResponse.model_validate(record)
+
+
+@router.put("/{record_id}/status", response_model=SuccessResponse)
+async def update_raw_record_status(
+    record_id: str,
+    data: RawRecordStatusUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(RawRecord).where(RawRecord.id == record_id)
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="Raw record not found")
+
+    if data.crawl_status is not None:
+        record.crawl_status = data.crawl_status
+    if data.dedupe_status is not None:
+        record.dedupe_status = data.dedupe_status
+    if data.error_message is not None:
+        record.error_message = data.error_message
+
+    await session.commit()
+    return SuccessResponse(message="Raw record status updated successfully")
