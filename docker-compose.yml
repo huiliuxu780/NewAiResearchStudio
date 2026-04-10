@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_USE_MOCK=false
+    depends_on:
+      - backend
+    networks:
+      - ai-research-network
+
+  backend:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/research.db
+    volumes:
+      - backend-data:/app/data
+    networks:
+      - ai-research-network
+
+  crawler:
+    build:
+      context: ./workers/crawler
+      dockerfile: Dockerfile
+    environment:
+      - API_BASE_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - ai-research-network
+    profiles:
+      - workers
+
+  fact-extractor:
+    build:
+      context: ./workers/fact_extractor
+      dockerfile: Dockerfile
+    environment:
+      - API_BASE_URL=http://backend:8000
+      - QWEN_API_KEY=${QWEN_API_KEY}
+    depends_on:
+      - backend
+    networks:
+      - ai-research-network
+    profiles:
+      - workers
+
+  insight-generator:
+    build:
+      context: ./workers/insight_generator
+      dockerfile: Dockerfile
+    environment:
+      - API_BASE_URL=http://backend:8000
+      - QWEN_API_KEY=${QWEN_API_KEY}
+    depends_on:
+      - backend
+    networks:
+      - ai-research-network
+    profiles:
+      - workers
+
+volumes:
+  backend-data:
+
+networks:
+  ai-research-network:
+    driver: bridge
