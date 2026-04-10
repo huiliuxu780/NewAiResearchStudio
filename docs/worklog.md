@@ -2,6 +2,67 @@
 
 ---
 
+## 2026-04-10 - Phase 3 完成（AI Workers + Qwen API 集成）
+
+### 本轮目标
+完成 Phase 3 核心功能：AI 驱动的事实抽取和结论生成。
+
+### 已完成内容
+
+#### 1. Phase 3 规划文档
+- 创建 docs/phase-3-plan.md
+- 定义 Phase 3 目标和任务分解
+- 设计 AI 服务架构
+
+#### 2. 事实抽取 Worker（fact_extractor）
+- 创建项目结构（config、extractor、prompts、main）
+- 实现 Qwen API 集成（dashscope）
+- 创建事实抽取 Prompt 模板
+- 实现 CLI 命令（单记录/批量/定时）
+- 与后端 API 集成
+
+#### 3. 结论生成 Worker（insight_generator）
+- 创建项目结构（config、generator、prompts、main）
+- 实现 Qwen API 集成（dashscope）
+- 创建结论生成 Prompt 模板
+- 实现 CLI 命令（指定事实/公司/定时）
+- 与后端 API 集成
+
+#### 4. 后端 API 更新
+- 添加 POST /raw-records/ 端点
+- 添加 POST /facts/ 端点
+- 添加 POST /insights/ 端点
+- 添加 PUT /raw-records/{id}/status 端点
+- 添加 PUT /facts/{id}/review 端点
+
+#### 5. 完整链路测试
+- 创建测试原始记录
+- 测试事实抽取：成功抽取 2 条事实
+- 测试结论生成：成功生成 2 条结论
+- 验证数据存储到数据库
+
+### 修改文件
+- docs/phase-3-plan.md（新增）
+- workers/fact_extractor/（7 个文件）
+- workers/insight_generator/（7 个文件）
+- apps/api/routers/（更新端点）
+- apps/api/schemas/（更新 schema）
+
+### 当前状态
+- 前端运行在 http://localhost:3001
+- 后端 API 运行在 http://localhost:8000
+- 事实抽取 Worker 测试通过
+- 结论生成 Worker 测试通过
+- 完整链路验证成功
+- 代码已推送到 GitHub
+
+### 下一步计划
+1. 完善前端数据展示
+2. 创建 Docker 配置文件
+3. 完善人工复核工作台
+
+---
+
 ## 2026-04-10 - Phase 2 完成（后端 API + 采集服务 + CRUD）
 
 ### 本轮目标
