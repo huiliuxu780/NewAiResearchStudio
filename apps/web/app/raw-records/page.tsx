@@ -6,6 +6,9 @@ import { mockRawRecords } from "@/mock/raw-records";
 import { RecordTable } from "@/components/raw-records/record-table";
 import { RecordFilter } from "@/components/raw-records/record-filter";
 import { RecordPreviewSheet } from "@/components/raw-records/record-preview-sheet";
+import { useRawRecords } from "@/hooks";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
 export default function RawRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<RawRecord | null>(null);
@@ -17,20 +20,29 @@ export default function RawRecordsPage() {
     dedupe: "all",
   });
 
+  const { data: apiData, isLoading } = useRawRecords({
+    source_id: filterValues.source !== "all" ? filterValues.source : undefined,
+    company: filterValues.company !== "all" ? filterValues.company : undefined,
+    status: filterValues.status !== "all" ? filterValues.status : undefined,
+  });
+
   const filteredRecords = useMemo(() => {
-    return mockRawRecords.filter((record) => {
-      if (filterValues.source !== "all" && record.sourceId !== filterValues.source) {
-        return false;
-      }
-      if (filterValues.company !== "all" && record.company !== filterValues.company) {
-        return false;
-      }
-      if (filterValues.status !== "all" && record.status !== filterValues.status) {
-        return false;
-      }
-      return true;
-    });
-  }, [filterValues]);
+    if (USE_MOCK) {
+      return mockRawRecords.filter((record) => {
+        if (filterValues.source !== "all" && record.sourceId !== filterValues.source) {
+          return false;
+        }
+        if (filterValues.company !== "all" && record.company !== filterValues.company) {
+          return false;
+        }
+        if (filterValues.status !== "all" && record.status !== filterValues.status) {
+          return false;
+        }
+        return true;
+      });
+    }
+    return apiData?.items || [];
+  }, [apiData, filterValues]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilterValues((prev) => ({ ...prev, [key]: value }));
@@ -60,7 +72,11 @@ export default function RawRecordsPage() {
         onReset={handleFilterReset}
       />
 
-      <RecordTable data={filteredRecords} onRowClick={handleRowClick} />
+      {isLoading && !USE_MOCK ? (
+        <div className="text-center py-8 text-muted-foreground">加载中...</div>
+      ) : (
+        <RecordTable data={filteredRecords} onRowClick={handleRowClick} />
+      )}
 
       <RecordPreviewSheet
         record={selectedRecord}
