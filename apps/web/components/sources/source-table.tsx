@@ -5,12 +5,14 @@ import { companyLabels, sourceTypeLabels } from "@/types/labels";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 
 interface SourceTableProps {
   data: Source[];
   onRowClick: (source: Source) => void;
   onToggleStatus: (source: Source) => void;
+  onEdit: (source: Source) => void;
+  onDelete: (source: Source) => void;
 }
 
 function formatDate(dateString: string | null) {
@@ -24,7 +26,7 @@ function formatDate(dateString: string | null) {
   });
 }
 
-export function SourceTable({ data, onRowClick, onToggleStatus }: SourceTableProps) {
+export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete }: SourceTableProps) {
   const columns = [
     {
       key: "name",
@@ -95,16 +97,41 @@ export function SourceTable({ data, onRowClick, onToggleStatus }: SourceTablePro
       key: "actions",
       header: "操作",
       render: (item: Source) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleStatus(item);
-          }}
-        >
-          {item.isActive ? "停用" : "启用"}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(item);
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+            编辑
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleStatus(item);
+            }}
+          >
+            {item.isActive ? "停用" : "启用"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+            删除
+          </Button>
+        </div>
       ),
     },
   ];
