@@ -16,7 +16,8 @@ class RawRecordBase(BaseSchema):
 
 
 class RawRecordCreate(RawRecordBase):
-    pass
+    crawl_status: str = "success"
+    dedupe_status: str = "new"
 
 
 class RawRecordResponse(RawRecordBase):

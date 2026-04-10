@@ -18,11 +18,11 @@ class Settings(BaseSettings):
 
     @property
     def raw_records_url(self) -> str:
-        return f"{self.api_base_url}/raw-records/"
+        return f"{self.api_base_url}/api/v1/raw-records/"
 
     @property
     def facts_url(self) -> str:
-        return f"{self.api_base_url}/facts/"
+        return f"{self.api_base_url}/api/v1/facts/"
 
 
 settings = Settings()

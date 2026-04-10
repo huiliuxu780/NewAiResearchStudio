@@ -3,11 +3,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.raw_record import RawRecord
-from schemas import PaginatedResponse, RawRecordResponse, RawRecordFilter, RawRecordStatusUpdate, SuccessResponse
+from schemas import PaginatedResponse, RawRecordResponse, RawRecordFilter, RawRecordStatusUpdate, SuccessResponse, RawRecordCreate
 from services import get_session
 from utils.helpers import get_paginated
 
 router = APIRouter(prefix="/raw-records", tags=["raw-records"])
+
+
+@router.post("/", response_model=RawRecordResponse)
+async def create_raw_record(
+    data: RawRecordCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    record = RawRecord(**data.model_dump())
+    session.add(record)
+    await session.commit()
+    await session.refresh(record)
+    return RawRecordResponse.model_validate(record)
 
 
 @router.get("/", response_model=PaginatedResponse[RawRecordResponse])
