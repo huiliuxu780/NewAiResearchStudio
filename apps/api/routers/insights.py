@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.insight import Insight
-from schemas import PaginatedResponse, InsightResponse, InsightFilter
+from schemas import PaginatedResponse, InsightResponse, InsightFilter, InsightCreate, SuccessResponse
 from services import get_session
 from utils.helpers import get_paginated
 
@@ -55,6 +55,18 @@ async def list_insights(
         page_size=page_size,
         total_pages=total_pages,
     )
+
+
+@router.post("/", response_model=InsightResponse, status_code=201)
+async def create_insight(
+    data: InsightCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    insight = Insight(**data.model_dump())
+    session.add(insight)
+    await session.commit()
+    await session.refresh(insight)
+    return InsightResponse.model_validate(insight)
 
 
 @router.get("/{insight_id}", response_model=InsightResponse)

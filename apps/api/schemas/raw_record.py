@@ -33,3 +33,9 @@ class RawRecordFilter(BaseSchema):
     crawl_status: str | None = None
     dedupe_status: str | None = None
     language: str | None = None
+
+
+class RawRecordStatusUpdate(BaseSchema):
+    crawl_status: str | None = None
+    dedupe_status: str | None = None
+    error_message: str | None = None
