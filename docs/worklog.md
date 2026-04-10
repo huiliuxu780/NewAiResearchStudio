@@ -2,6 +2,74 @@
 
 ---
 
+## 2026-04-10 - Phase 2 完成（后端 API + 采集服务 + CRUD）
+
+### 本轮目标
+完成 Phase 2 核心功能：后端 API、采集服务、前端 CRUD。
+
+### 已完成内容
+
+#### 1. FastAPI 后端初始化
+- 创建后端项目结构（config、models、schemas、routers、services）
+- 实现 SQLAlchemy 数据库模型（Source、RawRecord、Fact、Insight）
+- 实现 Pydantic Schema
+- 实现 API 路由（sources、raw-records、facts、insights）
+- 配置 SQLite 数据库（预留 PostgreSQL 切换）
+- 添加健康检查接口
+
+#### 2. 前端对接真实 API
+- 创建 API 客户端（ky + SWR）
+- 创建各模块 API 文件（sources、raw-records、facts、insights、dashboard）
+- 创建 React Hooks（useSources、useRawRecords、useFacts、useInsights、useDashboard）
+- 更新页面使用真实 API（支持 Mock 切换）
+- 添加环境变量配置
+- 添加 API 代理配置
+
+#### 3. Crawl4AI 采集服务
+- 创建采集 Worker 项目结构
+- 实现 Crawl4AI 封装（单页/多页采集）
+- 实现采集任务（与后端 API 集成）
+- 实现解析器（官方文档、博客、新闻）
+- 实现定时调度（APScheduler）
+- 提供 CLI 命令（单源/全量/定时采集）
+- 安装依赖并初始化 Crawl4AI
+
+#### 4. 信息源 CRUD 功能
+- 创建信息源表单组件（source-form.tsx）
+- 创建新增/编辑弹窗组件（source-form-dialog.tsx）
+- 添加 Switch、Label、Textarea、ConfirmDialog UI 组件
+- 更新信息源管理页面，支持新增、编辑、删除操作
+- 添加表单验证
+
+#### 5. 需求池创建
+- 创建 docs/requirements-pool.md
+- 记录采集源类型扩展需求（搜索关键词、整页读取、子页面遍历、官方号观测）
+
+### 修改文件
+- apps/api/（30 个文件，完整后端项目）
+- apps/web/lib/api/（6 个 API 文件）
+- apps/web/hooks/（6 个 Hooks 文件）
+- apps/web/app/（5 个页面更新）
+- apps/web/components/sources/（表单组件）
+- apps/web/components/ui/（UI 组件）
+- workers/crawler/（12 个文件，完整采集服务）
+- docs/requirements-pool.md（新增）
+- docs/phase-2-plan.md（新增）
+
+### 当前状态
+- 前端构建成功（npm run build）
+- 后端 API 运行在 http://localhost:8000
+- 前端运行在 http://localhost:3001
+- Crawl4AI 初始化成功
+- 代码已推送到 GitHub
+
+### 下一步计划
+1. Phase 3：接入 Qwen API 进行事实抽取
+2. Phase 3：创建结论生成 Worker
+3. Phase 3：完善人工复核工作台
+
+---
+
 ## 2026-04-10 - 前端骨架开发（智能体并行）
 
 ### 本轮目标
@@ -184,8 +252,15 @@
 | 7 | 原始记录页面 | feat/raw-records-page | ✅ 已完成 |
 | 8 | 标准化事实页面 | feat/facts-page | ✅ 已完成 |
 | 9 | 研究结论页面 | feat/insights-page | ✅ 已完成 |
-| 10 | 模型档案页面 | feat/models-page | 待开始 |
-| 11 | 产品档案页面 | feat/products-page | 待开始 |
-| 12 | 研究主题页面 | feat/topics-page | 待开始 |
-| 13 | 周报中心页面 | feat/reports-page | 待开始 |
-| 14 | 系统设置页面 | feat/settings-page | 待开始 |
+| 10 | 模型档案页面 | feat/models-page | ✅ 已完成 |
+| 11 | 产品档案页面 | feat/products-page | ✅ 已完成 |
+| 12 | 研究主题页面 | feat/topics-page | ✅ 已完成 |
+| 13 | 周报中心页面 | feat/reports-page | ✅ 已完成 |
+| 14 | 系统设置页面 | feat/settings-page | ✅ 已完成 |
+| 15 | FastAPI 后端 | feat/api-init | ✅ 已完成 |
+| 16 | 前端对接 API | feat/api-integration | ✅ 已完成 |
+| 17 | Crawl4AI 采集服务 | feat/crawler-service | ✅ 已完成 |
+| 18 | 信息源 CRUD | feat/source-crud | ✅ 已完成 |
+| 19 | Phase 3：Qwen API 接入 | feat/qwen-integration | 待开始 |
+| 20 | Phase 3：事实抽取 Worker | feat/fact-extractor | 待开始 |
+| 21 | Phase 3：结论生成 Worker | feat/insight-generator | 待开始 |
