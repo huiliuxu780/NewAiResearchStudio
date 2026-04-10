@@ -83,3 +83,8 @@ Desktop.ini
 *.tmp
 *.temp
 .cache/
+
+# Database
+*.db
+*.db-journal
+apps/api/data/
