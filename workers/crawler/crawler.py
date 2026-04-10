@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.content_filter_strategy import PruningContentFilter
@@ -113,7 +113,7 @@ class CrawlerService:
         base_url: str,
         page_param: str = "page",
         max_pages: int = 10,
-        stop_condition: callable | None = None,
+        stop_condition: Callable | None = None,
     ) -> list[CrawlResult]:
         results = []
 
