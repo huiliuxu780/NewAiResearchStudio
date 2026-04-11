@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 
 interface Column<T> {
@@ -25,6 +26,15 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
   emptyText?: string;
   className?: string;
+  /** Enable pagination. When true, the component expects pagination state via `pagination` prop. */
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange?: (size: number) => void;
+  };
 }
 
 export function DataTable<T>({
@@ -34,6 +44,7 @@ export function DataTable<T>({
   onRowClick,
   emptyText = "暂无数据",
   className,
+  pagination,
 }: DataTableProps<T>) {
   return (
     <div className={cn("rounded-lg border border-border", className)}>
@@ -83,6 +94,16 @@ export function DataTable<T>({
           )}
         </TableBody>
       </Table>
+      {pagination && (
+        <Pagination
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          total={pagination.total}
+          totalPages={pagination.totalPages}
+          onPageChange={pagination.onPageChange}
+          onPageSizeChange={pagination.onPageSizeChange}
+        />
+      )}
     </div>
   );
 }

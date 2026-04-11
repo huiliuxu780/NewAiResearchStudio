@@ -1,158 +1,112 @@
-import {
-  Company,
-  SourceType,
-  EventType,
-  RawRecordStatus,
-  FactStatus,
-  InsightStatus,
-  InsightType,
-  Priority,
-  WeekReportStatus,
-} from './enums';
-
 export interface Source {
   id: string;
   name: string;
-  company: Company;
-  type: SourceType;
+  company: string;
+  source_type: string;
   url: string;
-  description: string;
-  isActive: boolean;
-  lastFetchedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+  enabled: boolean;
+  schedule: string | null;
+  parser_type: string | null;
+  priority: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // 采集策略相关字段
+  crawl_strategy: string | null; // single_page, multi_page, search_keyword, social_media
+  crawl_config: Record<string, any> | null; // 采集配置
+  social_platform: string | null; // twitter, weibo, wechat, other
+  social_account_id: string | null;
 }
 
 export interface RawRecord {
   id: string;
-  sourceId: string;
-  source: Source;
+  source_id: string;
+  company: string;
   title: string;
-  content: string;
-  originalUrl: string;
-  publishedAt: string;
-  fetchedAt: string;
-  status: RawRecordStatus;
-  company: Company;
-  eventType: EventType;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
+  url: string;
+  published_at: string | null;
+  crawled_at: string;
+  raw_content: string | null;
+  raw_html_snapshot: string | null;
+  content_hash: string | null;
+  language: string | null;
+  crawl_status: string;
+  dedupe_status: string;
+  error_message: string | null;
 }
 
 export interface Fact {
   id: string;
-  rawRecordId: string;
-  rawRecord: RawRecord;
-  title: string;
-  content: string;
-  summary: string;
-  company: Company;
-  eventType: EventType;
-  status: FactStatus;
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
+  raw_record_id: string;
+  company: string;
+  fact_summary: string;
+  topic_level_1: string;
+  topic_level_2: string | null;
+  event_type: string;
+  entity_type: string;
+  entity_name: string;
+  importance_level: string;
+  capability_level: string | null;
+  confidence: string;
+  published_at: string | null;
+  source_url: string;
+  needs_review: boolean;
+  review_status: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Insight {
   id: string;
-  title: string;
-  content: string;
-  summary: string;
-  type: InsightType;
-  status: InsightStatus;
-  priority: Priority;
-  relatedFactIds: string[];
-  relatedFacts: Fact[];
-  author: string;
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-  publishedAt: string | null;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ModelProfile {
-  id: string;
-  name: string;
-  company: Company;
-  description: string;
-  version: string;
-  releaseDate: string;
-  capabilities: string[];
-  limitations: string[];
-  parameters: string;
-  contextWindow: string;
-  pricing: string;
-  status: 'active' | 'deprecated' | 'beta';
-  relatedFacts: Fact[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ProductProfile {
-  id: string;
-  name: string;
-  company: Company;
-  description: string;
-  category: string;
-  launchDate: string;
-  features: string[];
-  targetUsers: string[];
-  pricing: string;
-  status: 'active' | 'discontinued' | 'beta';
-  relatedFacts: Fact[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ResearchTopic {
-  id: string;
-  name: string;
-  description: string;
-  companies: Company[];
-  keywords: string[];
-  relatedInsights: Insight[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface WeekReport {
-  id: string;
-  title: string;
-  weekStartDate: string;
-  weekEndDate: string;
-  content: string;
-  summary: string;
-  status: WeekReportStatus;
-  author: string;
-  publishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+  fact_id: string;
+  company: string;
+  insight_content: string;
+  insight_type: string;
+  impact_level: string;
+  confidence: string;
+  reasoning_brief: string | null;
+  action_suggestion: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DashboardStats {
-  totalSources: number;
-  activeSources: number;
-  totalRawRecords: number;
-  pendingRawRecords: number;
-  totalFacts: number;
-  pendingReviewFacts: number;
-  totalInsights: number;
-  publishedInsights: number;
-  weeklyNewRecords: number;
-  weeklyNewFacts: number;
-  weeklyNewInsights: number;
+  today_fact_count: number;
+  pending_review_count: number;
+  insight_count: number;
+  active_source_count: number;
 }
 
 export interface CompanyStats {
-  company: Company;
-  recordCount: number;
-  factCount: number;
-  insightCount: number;
-  lastActivityAt: string | null;
+  company: string;
+  count: number;
+}
+
+export interface TrendData {
+  date: string;
+  count: number;
+  company: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  category: string;
+  task_type: string;
+  template: string;
+  variables: string[];
+  version: number;
+  is_active: boolean;
+  description: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }

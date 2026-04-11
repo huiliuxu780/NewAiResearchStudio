@@ -1,313 +1,328 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Company } from "@/types";
-import { mockModels, Model, ModelType, modelTypeLabels, apiCapabilityLabels } from "@/mock/models";
-import { companyLabels } from "@/types/labels";
-import { DataTable } from "@/components/ui/data-table";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Pencil, Trash2, TestTube, CheckCircle2, XCircle, Cpu, Thermometer, Maximize2, Clock, FileText, Sparkles, Bot, Globe, Settings2, ArrowRight, Star, ShieldCheck, Zap, AlertTriangle, Info } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { cn } from "@/lib/utils";
+
+interface AIModel {
+  id: string;
+  name: string;
+  provider: string;
+  model_name: string;
+  api_base_url: string | null;
+  temperature: number;
+  max_tokens: number;
+  enabled: boolean;
+  is_default: boolean;
+  task_types: string[];
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const PROVIDER_LABELS: Record<string, string> = {
+  qwen: "通义千问",
+  openai: "OpenAI",
+  deepseek: "DeepSeek",
+  custom: "自定义",
+};
+
+const PROVIDER_ICONS: Record<string, typeof Bot> = {
+  qwen: Sparkles,
+  openai: Globe,
+  deepseek: Cpu,
+  custom: Settings2,
+};
+
+const PROVIDER_COLORS: Record<string, string> = {
+  qwen: "from-violet-500/20 to-violet-500/5 border-violet-500/20 text-violet-400",
+  openai: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400",
+  deepseek: "from-blue-500/20 to-blue-500/5 border-blue-500/20 text-blue-400",
+  custom: "from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400",
+};
+
+const TASK_TYPE_LABELS: Record<string, string> = {
+  fact_extraction: "事实抽取",
+  insight_generation: "结论生成",
+};
+
+const TASK_TYPE_COLORS: Record<string, string> = {
+  fact_extraction: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  insight_generation: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+};
 
 export default function ModelsPage() {
-  const [models] = useState<Model[]>(mockModels);
-  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [models, setModels] = useState<AIModel[]>([
+    {
+      id: "1",
+      name: "Qwen-Plus",
+      provider: "qwen",
+      model_name: "qwen-plus",
+      api_base_url: null,
+      temperature: 0.1,
+      max_tokens: 2000,
+      enabled: true,
+      is_default: true,
+      task_types: ["fact_extraction", "insight_generation"],
+      notes: "默认模型",
+      created_at: "2026-04-10T00:00:00",
+      updated_at: "2026-04-10T00:00:00",
+    },
+  ]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
 
-  const [company, setCompany] = useState<Company | "">("");
-  const [modelType, setModelType] = useState<ModelType | "">("");
-
-  const filteredModels = useMemo(() => {
-    return models.filter((model) => {
-      if (company && model.company !== company) return false;
-      if (modelType && model.modelType !== modelType) return false;
-      return true;
-    });
-  }, [models, company, modelType]);
-
-  const handleRowClick = (model: Model) => {
+  const handleDelete = (model: AIModel) => {
     setSelectedModel(model);
-    setSheetOpen(true);
+    setDeleteDialogOpen(true);
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "active":
-        return "default";
-      case "beta":
-        return "secondary";
-      case "deprecated":
-        return "outline";
-      default:
-        return "outline";
+  const confirmDelete = () => {
+    if (selectedModel) {
+      setModels(models.filter((m) => m.id !== selectedModel.id));
+      setDeleteDialogOpen(false);
+      setSelectedModel(null);
     }
   };
 
-  const columns = [
-    {
-      key: "name",
-      header: "模型名称",
-      render: (model: Model) => (
-        <span className="font-medium">{model.name}</span>
-      ),
-    },
-    {
-      key: "company",
-      header: "所属公司",
-      render: (model: Model) => (
-        <Badge variant="outline">{companyLabels[model.company]}</Badge>
-      ),
-    },
-    {
-      key: "modelType",
-      header: "模型类型",
-      render: (model: Model) => (
-        <Badge variant="ghost">{modelTypeLabels[model.modelType]}</Badge>
-      ),
-    },
-    {
-      key: "releaseDate",
-      header: "发布时间",
-      render: (model: Model) => (
-        <span className="text-sm text-muted-foreground">
-          {formatDate(model.releaseDate)}
-        </span>
-      ),
-    },
-    {
-      key: "pricing",
-      header: "定价信息",
-      render: (model: Model) => (
-        <span className="text-sm line-clamp-1 max-w-[150px]">{model.pricing}</span>
-      ),
-      className: "max-w-[150px]",
-    },
-    {
-      key: "capabilities",
-      header: "核心能力",
-      render: (model: Model) => (
-        <div className="flex flex-wrap gap-1 max-w-[200px]">
-          {model.capabilities.slice(0, 3).map((cap) => (
-            <Badge key={cap} variant="ghost" className="text-xs">
-              {cap}
-            </Badge>
-          ))}
-          {model.capabilities.length > 3 && (
-            <Badge variant="ghost" className="text-xs">
-              +{model.capabilities.length - 3}
-            </Badge>
-          )}
-        </div>
-      ),
-      className: "max-w-[200px]",
-    },
-    {
-      key: "contextLength",
-      header: "上下文长度",
-      render: (model: Model) => (
-        <span className="text-sm">{model.contextLength}</span>
-      ),
-    },
-    {
-      key: "apiCapabilities",
-      header: "API能力",
-      render: (model: Model) => (
-        <div className="flex flex-wrap gap-1">
-          {model.apiCapabilities.slice(0, 2).map((cap) => (
-            <Badge key={cap} variant="outline" className="text-xs">
-              {apiCapabilityLabels[cap]}
-            </Badge>
-          ))}
-          {model.apiCapabilities.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{model.apiCapabilities.length - 2}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "actions",
-      header: "操作",
-      render: (model: Model) => (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRowClick(model);
-          }}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-      ),
-    },
-  ];
+  const handleTest = (model: AIModel) => {
+    alert(`测试模型: ${model.name}\n(功能开发中)`);
+  };
+
+  const handleToggleDefault = (model: AIModel) => {
+    setModels(
+      models.map((m) => ({
+        ...m,
+        is_default: m.id === model.id,
+      }))
+    );
+  };
+
+  const handleToggleEnabled = (model: AIModel) => {
+    setModels(
+      models.map((m) =>
+        m.id === model.id ? { ...m, enabled: !m.enabled } : m
+      )
+    );
+  };
 
   return (
     <div className="space-y-6">
+      {/* 页面标题 */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">模型档案</h1>
-        <p className="text-sm text-muted-foreground">
-          共 {filteredModels.length} 个模型
-        </p>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Bot className="h-6 w-6 text-primary" />
+            AI 模型管理
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            管理 AI 模型配置，支持多模型切换和参数调整
+          </p>
+        </div>
+        <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
+          <Plus className="h-4 w-4" />
+          添加模型
+        </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={company || undefined}
-          onValueChange={(value) => setCompany((value ?? "") as Company | "")}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="公司筛选" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">全部公司</SelectItem>
-            {Object.values(Company).map((c) => (
-              <SelectItem key={c} value={c}>
-                {companyLabels[c]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* 模型卡片列表 */}
+      <div className="grid gap-4">
+        {models.map((model) => {
+          const ProviderIcon = PROVIDER_ICONS[model.provider] || Settings2;
+          const providerColor = PROVIDER_COLORS[model.provider] || PROVIDER_COLORS.custom;
 
-        <Select
-          value={modelType || undefined}
-          onValueChange={(value) => setModelType((value ?? "") as ModelType | "")}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="模型类型" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">全部类型</SelectItem>
-            {Object.keys(modelTypeLabels).map((t) => (
-              <SelectItem key={t} value={t}>
-                {modelTypeLabels[t as ModelType]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          return (
+            <Card
+              key={model.id}
+              className={cn(
+                "group border-border/40 transition-all duration-300 hover:border-border/60 hover:shadow-xl hover:shadow-black/10",
+                model.is_default && "ring-1 ring-primary/20 bg-gradient-to-r from-primary/5 to-transparent"
+              )}
+            >
+              <CardHeader className="pb-3 pt-4 px-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {/* 提供商图标 */}
+                    <div className={cn(
+                      "flex-shrink-0 rounded-xl bg-gradient-to-br p-2.5 border",
+                      providerColor
+                    )}>
+                      <ProviderIcon className="h-5 w-5" />
+                    </div>
 
-      <DataTable
-        columns={columns}
-        data={filteredModels}
-        rowKey={(model) => model.id}
-        onRowClick={handleRowClick}
-        emptyText="暂无模型数据"
-      />
-
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{selectedModel?.name}</SheetTitle>
-            <SheetDescription>{selectedModel?.description}</SheetDescription>
-          </SheetHeader>
-          {selectedModel && (
-            <ScrollArea className="h-[calc(100vh-120px)]">
-              <div className="space-y-4 p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">所属公司</span>
-                    <Badge variant="outline">{companyLabels[selectedModel.company]}</Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">模型类型</span>
-                    <Badge variant="outline">{modelTypeLabels[selectedModel.modelType]}</Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">发布时间</span>
-                    <span className="text-sm">{formatDate(selectedModel.releaseDate)}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">状态</span>
-                    <Badge variant={getStatusBadgeVariant(selectedModel.status)}>
-                      {selectedModel.status === "active" ? "活跃" : selectedModel.status === "beta" ? "测试版" : "已废弃"}
-                    </Badge>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-foreground">定价信息</h3>
-                  <p className="text-sm text-muted-foreground">{selectedModel.pricing}</p>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-foreground">上下文长度</h3>
-                  <p className="text-sm text-muted-foreground">{selectedModel.contextLength}</p>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-foreground">核心能力</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedModel.capabilities.map((cap) => (
-                      <Badge key={cap} variant="ghost">{cap}</Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-foreground">API能力</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedModel.apiCapabilities.map((cap) => (
-                      <Badge key={cap} variant="outline">{apiCapabilityLabels[cap]}</Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-foreground">更新历史</h3>
-                  <div className="space-y-3">
-                    {selectedModel.updateHistory.map((update, index) => (
-                      <div key={index} className="rounded-lg border border-border bg-muted/30 p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="secondary">v{update.version}</Badge>
-                          <span className="text-xs text-muted-foreground">{formatDate(update.date)}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{update.changes}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CardTitle className="text-base">{model.name}</CardTitle>
+                        {model.is_default && (
+                          <Badge variant="default" className="bg-primary/15 text-primary hover:bg-primary/25 border-primary/20 gap-1">
+                            <Star className="h-3 w-3" />
+                            默认
+                          </Badge>
+                        )}
+                        {model.enabled ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 gap-1">
+                            <ShieldCheck className="h-3 w-3" />
+                            已启用
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground/60 bg-muted/30">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            已停用
+                          </Badge>
+                        )}
                       </div>
-                    ))}
+                      <CardDescription className="mt-1.5 flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-foreground/80">
+                          {PROVIDER_LABELS[model.provider] || model.provider}
+                        </span>
+                        <span className="text-muted-foreground/50">/</span>
+                        <code className="rounded bg-muted/50 px-1.5 py-0.5 text-xs font-mono">
+                          {model.model_name}
+                        </code>
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  {/* 操作按钮 */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTest(model)}
+                      className="h-8 gap-1.5 text-xs border-border/40 bg-background/40 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+                    >
+                      <TestTube className="h-3.5 w-3.5" />
+                      测试
+                    </Button>
+                    <Button variant="outline" size="icon-sm" className="h-8 w-8 border-border/40 bg-background/40 hover:bg-muted/50 transition-all">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() => handleDelete(model)}
+                      className="h-8 w-8 text-destructive/70 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 border-border/40 bg-background/40 transition-all"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-              </div>
-            </ScrollArea>
-          )}
-        </SheetContent>
-      </Sheet>
+              </CardHeader>
+
+              <CardContent className="px-5 pb-5">
+                {/* 参数网格 */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* 温度 */}
+                  <div className="rounded-lg bg-muted/20 p-3 border border-border/30 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                      <Thermometer className="h-3.5 w-3.5" />
+                      <span className="text-xs">温度</span>
+                    </div>
+                    <p className="text-lg font-semibold font-mono">{model.temperature}</p>
+                  </div>
+
+                  {/* 最大 Token */}
+                  <div className="rounded-lg bg-muted/20 p-3 border border-border/30 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      <span className="text-xs">最大 Token</span>
+                    </div>
+                    <p className="text-lg font-semibold font-mono">{model.max_tokens.toLocaleString()}</p>
+                  </div>
+
+                  {/* 任务类型 */}
+                  <div className="rounded-lg bg-muted/20 p-3 border border-border/30 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span className="text-xs">任务类型</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {model.task_types.map((task) => (
+                        <Badge
+                          key={task}
+                          variant="outline"
+                          className={cn("text-xs", TASK_TYPE_COLORS[task] || "")}
+                        >
+                          {TASK_TYPE_LABELS[task] || task}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 快捷操作 */}
+                  <div className="rounded-lg bg-muted/20 p-3 border border-border/30 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                      <Settings2 className="h-3.5 w-3.5" />
+                      <span className="text-xs">快捷操作</span>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Button
+                        variant={model.is_default ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleToggleDefault(model)}
+                        className={cn(
+                          "h-7 text-xs gap-1.5 w-full justify-start border-border/40 bg-background/40",
+                          model.is_default && "bg-primary/15 text-primary hover:bg-primary/25 border-primary/20"
+                        )}
+                      >
+                        {model.is_default ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        )}
+                        设为默认
+                      </Button>
+                      <Button
+                        variant={model.enabled ? "outline" : "secondary"}
+                        size="sm"
+                        onClick={() => handleToggleEnabled(model)}
+                        className={cn(
+                          "h-7 text-xs gap-1.5 w-full justify-start border-border/40 bg-background/40",
+                          model.enabled
+                            ? "text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {model.enabled ? (
+                          <XCircle className="h-3.5 w-3.5" />
+                        ) : (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        )}
+                        {model.enabled ? "停用" : "启用"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 备注 */}
+                {model.notes && (
+                  <div className="mt-4 pt-3 border-t border-border/30">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground">{model.notes}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="确认删除"
+        description={`确定要删除模型 "${selectedModel?.name}" 吗？此操作不可撤销。`}
+        onConfirm={confirmDelete}
+        confirmText="删除"
+        variant="destructive"
+      />
     </div>
   );
 }

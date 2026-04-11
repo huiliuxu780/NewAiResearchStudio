@@ -3,7 +3,7 @@
 import * as React from "react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -14,141 +14,54 @@ import {
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { FactList } from "@/components/dashboard/fact-list";
 import { InsightList } from "@/components/dashboard/insight-list";
-import {
-  mockDashboardStats,
-  mockCompanyStats,
-  getTrendDataByCompany,
-} from "@/mock/dashboard";
-import { mockFacts } from "@/mock/facts";
-import { mockInsights } from "@/mock/insights";
-import { Company, Fact, Insight } from "@/types";
-import { companyLabels } from "@/types/labels";
 import { useDashboardStats, useCompanyStats, useTrendData, useFacts, useInsights } from "@/hooks";
+import { companyLabels } from "@/types/labels";
 import {
   Activity,
   Database,
   FileText,
   CheckCircle,
   Lightbulb,
-  TrendingUp,
 } from "lucide-react";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
 const COMPANY_OPTIONS = [
   { value: "all", label: "全部" },
-  { value: Company.ALIBABA, label: "阿里" },
-  { value: Company.BYTE_DANCE, label: "字节" },
-  { value: Company.TENCENT, label: "腾讯" },
+  { value: "alibaba", label: "阿里" },
+  { value: "byte_dance", label: "字节" },
+  { value: "tencent", label: "腾讯" },
 ];
 
 export default function Home() {
   const [selectedCompany, setSelectedCompany] = React.useState<string>("all");
 
-  const companyFilter = selectedCompany === "all" ? null : selectedCompany as Company;
+  const companyFilter = selectedCompany === "all" ? null : selectedCompany;
 
-  const { data: apiDashboardStats, isLoading: statsLoading } = useDashboardStats();
-  const { data: apiCompanyStats } = useCompanyStats();
-  const { data: apiTrendData } = useTrendData(companyFilter || undefined);
-  const { data: apiFactsData } = useFacts({ page_size: 10 });
-  const { data: apiInsightsData } = useInsights({ status: "approved", page_size: 5 });
+  const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useDashboardStats();
+  const { data: companyStats } = useCompanyStats();
+  const { data: trendData } = useTrendData(companyFilter || undefined);
+  const { data: factsData } = useFacts({ page_size: 10 });
+  const { data: insightsData } = useInsights({ page_size: 5 });
 
-  const filteredFacts = React.useMemo(() => {
-    if (USE_MOCK) {
-      let facts = mockFacts.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      if (companyFilter) {
-        facts = facts.filter((fact) => fact.company === companyFilter);
-      }
-      return facts.slice(0, 10);
-    }
-    let facts: Fact[] = apiFactsData?.items || [];
-    if (companyFilter) {
-      facts = facts.filter((fact) => fact.company === companyFilter);
-    }
-    return facts;
-  }, [companyFilter, apiFactsData]);
+  if (statsError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <div className="text-center py-8 text-destructive">
+          加载失败: {statsError.message}
+        </div>
+      </div>
+    );
+  }
 
-  const filteredInsights = React.useMemo(() => {
-    if (USE_MOCK) {
-      let insights = mockInsights
-        .filter((insight) => insight.status === "approved")
-        .sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      if (companyFilter) {
-        insights = insights.filter((insight) =>
-          insight.relatedFacts.some((fact) => fact.company === companyFilter)
-        );
-      }
-      return insights.slice(0, 5);
-    }
-    let insights: Insight[] = apiInsightsData?.items || [];
-    if (companyFilter) {
-      insights = insights.filter((insight) =>
-        insight.relatedFacts?.some((fact) => fact.company === companyFilter)
-      );
-    }
-    return insights;
-  }, [companyFilter, apiInsightsData]);
+  const stats = {
+    today_fact_count: dashboardStats?.today_fact_count || 0,
+    pending_review_count: dashboardStats?.pending_review_count || 0,
+    insight_count: dashboardStats?.insight_count || 0,
+    active_source_count: dashboardStats?.active_source_count || 0,
+  };
 
-  const stats = React.useMemo(() => {
-    if (USE_MOCK) {
-      if (!companyFilter) {
-        return {
-          todayNewInsights: mockDashboardStats.weeklyNewInsights,
-          pendingReviewFacts: mockDashboardStats.pendingReviewFacts,
-          latestInsights: mockDashboardStats.totalInsights,
-          activeSources: mockDashboardStats.activeSources,
-        };
-      }
-      const companyStat = mockCompanyStats.find((stat) => stat.company === companyFilter);
-      return {
-        todayNewInsights: companyStat?.insightCount || 0,
-        pendingReviewFacts: mockFacts.filter(
-          (f) => f.company === companyFilter && f.status === "pending_review"
-        ).length,
-        latestInsights: companyStat?.insightCount || 0,
-        activeSources: mockDashboardStats.activeSources,
-      };
-    }
-    const dashboardStats = apiDashboardStats || {
-      weeklyNewInsights: 0,
-      pendingReviewFacts: 0,
-      totalInsights: 0,
-      activeSources: 0,
-    };
-    if (!companyFilter) {
-      return {
-        todayNewInsights: dashboardStats.weeklyNewInsights,
-        pendingReviewFacts: dashboardStats.pendingReviewFacts,
-        latestInsights: dashboardStats.totalInsights,
-        activeSources: dashboardStats.activeSources,
-      };
-    }
-    const companyStat = apiCompanyStats?.find((stat) => stat.company === companyFilter);
-    return {
-      todayNewInsights: companyStat?.insightCount || 0,
-      pendingReviewFacts: filteredFacts.filter((f) => f.status === "pending_review").length,
-      latestInsights: companyStat?.insightCount || 0,
-      activeSources: dashboardStats.activeSources,
-    };
-  }, [companyFilter, apiDashboardStats, apiCompanyStats, filteredFacts]);
-
-  const trendData = React.useMemo(() => {
-    if (USE_MOCK) {
-      return getTrendDataByCompany(companyFilter);
-    }
-    return apiTrendData || [];
-  }, [companyFilter, apiTrendData]);
-
-  const companyStats = React.useMemo(() => {
-    if (USE_MOCK) {
-      return mockCompanyStats;
-    }
-    return apiCompanyStats || [];
-  }, [apiCompanyStats]);
+  const facts = factsData?.items || [];
+  const insights = insightsData?.items || [];
 
   return (
     <div className="space-y-6">
@@ -170,64 +83,84 @@ export default function Home() {
         </div>
       </div>
 
-      {statsLoading && !USE_MOCK ? (
+      {statsLoading ? (
         <div className="text-center py-8 text-muted-foreground">加载中...</div>
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatsCard
               title="今日新增情报数"
-              value={stats.todayNewInsights}
+              value={stats.today_fact_count}
               icon={Activity}
               trend={{ value: 12, label: "较昨日", positive: true }}
             />
             <StatsCard
               title="待复核事实数"
-              value={stats.pendingReviewFacts}
+              value={stats.pending_review_count}
               icon={CheckCircle}
             />
             <StatsCard
               title="最新研究结论数"
-              value={stats.latestInsights}
+              value={stats.insight_count}
               icon={Lightbulb}
             />
             <StatsCard
               title="活跃信息源数"
-              value={stats.activeSources}
+              value={stats.active_source_count}
               icon={Database}
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TrendChart data={trendData} title="近7日情报趋势" />
-            <InsightList insights={filteredInsights} title="最新研究结论" />
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg">情报趋势</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TrendChart data={trendData || []} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">公司分布</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {companyStats?.map((stat) => (
+                    <div key={stat.company} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {companyLabels[stat.company] || stat.company}
+                        </Badge>
+                      </div>
+                      <span className="text-sm font-medium">{stat.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <FactList facts={filteredFacts} title="最新标准化事实" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">最新事实</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FactList facts={facts} />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                企业数据统计
-              </CardTitle>
-              <CardDescription>各企业数据分布情况</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {companyStats.map((stat) => (
-                  <div key={stat.company} className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{companyLabels[stat.company]}</span>
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline">{stat.recordCount} 记录</Badge>
-                      <Badge variant="outline">{stat.factCount} 事实</Badge>
-                      <Badge variant="outline">{stat.insightCount} 结论</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">最新研究结论</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <InsightList insights={insights} />
+              </CardContent>
+            </Card>
+          </div>
         </>
       )}
     </div>

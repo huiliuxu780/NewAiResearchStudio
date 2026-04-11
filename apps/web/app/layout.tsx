@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/app-layout";
+import { DataProvider } from "@/lib/data-provider";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -28,9 +29,11 @@ export default function RootLayout({
       className={cn("dark", "h-full", "antialiased", geistMono.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <TooltipProvider>
-          <AppLayout>{children}</AppLayout>
-        </TooltipProvider>
+        <DataProvider>
+          <TooltipProvider>
+            <AppLayout>{children}</AppLayout>
+          </TooltipProvider>
+        </DataProvider>
       </body>
     </html>
   );

@@ -1,88 +1,35 @@
 "use client";
 
-import * as React from "react";
-import { DataTable } from "@/components/ui/data-table";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Fact } from "@/types";
-import { companyLabels, eventTypeLabels, factStatusLabels } from "@/types/labels";
-import { FileText } from "lucide-react";
+import { Fact } from "@/types/entities";
+import { companyLabels, eventTypeLabels, reviewStatusLabels } from "@/types/labels";
 
 interface FactListProps {
   facts: Fact[];
-  title?: string;
 }
 
-export function FactList({ facts, title = "最新标准化事实" }: FactListProps) {
-  const columns = [
-    {
-      key: "createdAt",
-      header: "时间",
-      render: (fact: Fact) => (
-        <span className="text-sm text-muted-foreground">
-          {new Date(fact.createdAt).toLocaleDateString("zh-CN")}
-        </span>
-      ),
-      className: "w-[100px]",
-    },
-    {
-      key: "company",
-      header: "公司",
-      render: (fact: Fact) => (
-        <Badge variant="outline" className="text-xs">
-          {companyLabels[fact.company]}
-        </Badge>
-      ),
-      className: "w-[100px]",
-    },
-    {
-      key: "eventType",
-      header: "事件类型",
-      render: (fact: Fact) => (
-        <Badge variant="secondary" className="text-xs">
-          {eventTypeLabels[fact.eventType]}
-        </Badge>
-      ),
-      className: "w-[120px]",
-    },
-    {
-      key: "summary",
-      header: "事实摘要",
-      render: (fact: Fact) => (
-        <span className="text-sm line-clamp-2">{fact.summary}</span>
-      ),
-    },
-    {
-      key: "status",
-      header: "复核状态",
-      render: (fact: Fact) => (
-        <Badge
-          variant={fact.status === "approved" ? "default" : "secondary"}
-          className="text-xs"
-        >
-          {factStatusLabels[fact.status]}
-        </Badge>
-      ),
-      className: "w-[100px]",
-    },
-  ];
+export function FactList({ facts }: FactListProps) {
+  if (facts.length === 0) {
+    return <div className="text-center text-muted-foreground py-4">暂无事实数据</div>;
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <DataTable
-          columns={columns}
-          data={facts}
-          rowKey={(fact) => fact.id}
-          emptyText="暂无事实数据"
-        />
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      {facts.slice(0, 5).map((fact) => (
+        <div key={fact.id} className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm line-clamp-2">{fact.fact_summary}</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-muted-foreground">
+                {companyLabels[fact.company] || fact.company}
+              </span>
+              <span className="text-xs text-muted-foreground">|</span>
+              <span className="text-xs text-muted-foreground">
+                {eventTypeLabels[fact.event_type] || fact.event_type}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

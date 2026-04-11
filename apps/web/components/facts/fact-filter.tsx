@@ -1,106 +1,65 @@
 "use client";
 
-import { Company, EventType, FactStatus } from "@/types";
-import { companyLabels, eventTypeLabels, factStatusLabels } from "@/types/labels";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterBar, FilterConfig } from "@/components/ui/filter-bar";
+import { companyLabels, eventTypeLabels, reviewStatusLabels, importanceLevelLabels } from "@/types/labels";
 
 interface FactFilterProps {
-  company: Company | "";
-  eventType: EventType | "";
-  status: FactStatus | "";
-  needReview: string | null;
-  onCompanyChange: (value: Company | "") => void;
-  onEventTypeChange: (value: EventType | "") => void;
-  onStatusChange: (value: FactStatus | "") => void;
-  onNeedReviewChange: (value: string) => void;
+  values: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+  onReset?: () => void;
 }
 
-export function FactFilter({
-  company,
-  eventType,
-  status,
-  needReview,
-  onCompanyChange,
-  onEventTypeChange,
-  onStatusChange,
-  onNeedReviewChange,
-}: FactFilterProps) {
-  const companies = Object.values(Company);
-  const eventTypes = Object.values(EventType);
-  const statuses = Object.values(FactStatus);
+const companyOptions = Object.entries(companyLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Select
-        value={company || undefined}
-        onValueChange={(value) => onCompanyChange((value ?? "") as Company | "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="公司筛选" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部公司</SelectItem>
-          {companies.map((c) => (
-            <SelectItem key={c} value={c}>
-              {companyLabels[c]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+const eventTypeOptions = Object.entries(eventTypeLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-      <Select
-        value={eventType || undefined}
-        onValueChange={(value) => onEventTypeChange((value ?? "") as EventType | "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="事件类型" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部类型</SelectItem>
-          {eventTypes.map((e) => (
-            <SelectItem key={e} value={e}>
-              {eventTypeLabels[e]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+const reviewStatusOptions = Object.entries(reviewStatusLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-      <Select
-        value={status || undefined}
-        onValueChange={(value) => onStatusChange((value ?? "") as FactStatus | "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="复核状态" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部状态</SelectItem>
-          {statuses.map((s) => (
-            <SelectItem key={s} value={s}>
-              {factStatusLabels[s]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+const importanceOptions = Object.entries(importanceLevelLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-      <Select
-        value={needReview || undefined}
-        onValueChange={(value) => onNeedReviewChange(value ?? "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="是否需复核" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部</SelectItem>
-          <SelectItem value="yes">需复核</SelectItem>
-          <SelectItem value="no">无需复核</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-  );
+export function FactFilter({ values, onChange, onReset }: FactFilterProps) {
+  const filters: FilterConfig[] = [
+    {
+      key: "company",
+      type: "select",
+      label: "所属公司",
+      tooltip: "按公司筛选标准化事实",
+      options: companyOptions,
+    },
+    {
+      key: "event_type",
+      type: "select",
+      label: "事件类型",
+      tooltip: "事实对应的事件类型，如发布、更新、收购等",
+      options: eventTypeOptions,
+    },
+    {
+      key: "importance_level",
+      type: "select",
+      label: "重要性",
+      tooltip: "事实的重要程度，分为高、中、低",
+      options: importanceOptions,
+    },
+    {
+      key: "review_status",
+      type: "select",
+      label: "复核状态",
+      tooltip: "事实的复核状态，包括待复核、已确认、已驳回等",
+      options: reviewStatusOptions,
+    },
+  ];
+
+  return <FilterBar filters={filters} values={values} onChange={onChange} onReset={onReset} />;
 }

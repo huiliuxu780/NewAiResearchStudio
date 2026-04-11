@@ -1,61 +1,61 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { RawRecord } from "@/types";
-import { mockRawRecords } from "@/mock/raw-records";
+import { RawRecord } from "@/types/entities";
 import { RecordTable } from "@/components/raw-records/record-table";
 import { RecordFilter } from "@/components/raw-records/record-filter";
 import { RecordPreviewSheet } from "@/components/raw-records/record-preview-sheet";
-import { useRawRecords } from "@/hooks";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+import { useRawRecords, useSources } from "@/hooks";
 
 export default function RawRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<RawRecord | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({
-    source: "all",
-    company: "all",
-    status: "all",
-    dedupe: "all",
-  });
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const { data: apiData, isLoading } = useRawRecords({
-    source_id: filterValues.source !== "all" ? filterValues.source : undefined,
-    company: filterValues.company !== "all" ? filterValues.company : undefined,
-    status: filterValues.status !== "all" ? filterValues.status : undefined,
+  const { data: sourcesData } = useSources();
+  const { data: apiData, isLoading, error } = useRawRecords({
+    company: filters.company && filters.company !== "all" ? filters.company : undefined,
+    crawl_status: filters.crawl_status && filters.crawl_status !== "all" ? filters.crawl_status : undefined,
+    dedupe_status: filters.dedupe_status && filters.dedupe_status !== "all" ? filters.dedupe_status : undefined,
+    page,
+    page_size: pageSize,
   });
 
   const filteredRecords = useMemo(() => {
-    if (USE_MOCK) {
-      return mockRawRecords.filter((record) => {
-        if (filterValues.source !== "all" && record.sourceId !== filterValues.source) {
-          return false;
-        }
-        if (filterValues.company !== "all" && record.company !== filterValues.company) {
-          return false;
-        }
-        if (filterValues.status !== "all" && record.status !== filterValues.status) {
-          return false;
-        }
-        return true;
-      });
-    }
     return apiData?.items || [];
-  }, [apiData, filterValues]);
+  }, [apiData]);
+
+  const sources = useMemo(() => {
+    return sourcesData?.items || [];
+  }, [sourcesData]);
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilterValues((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
   };
 
-  const handleFilterReset = () => {
-    setFilterValues({ source: "all", company: "all", status: "all", dedupe: "all" });
+  const handleResetFilters = () => {
+    setFilters({});
+    setPage(1);
   };
 
   const handleRowClick = (record: RawRecord) => {
     setSelectedRecord(record);
     setSheetOpen(true);
   };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground">原始记录</h1>
+        <div className="text-center py-8 text-destructive">
+          加载失败: {error.message}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -67,15 +67,29 @@ export default function RawRecordsPage() {
       </div>
 
       <RecordFilter
-        values={filterValues}
+        values={filters}
         onChange={handleFilterChange}
-        onReset={handleFilterReset}
+        onReset={handleResetFilters}
       />
 
-      {isLoading && !USE_MOCK ? (
+      {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">加载中...</div>
       ) : (
-        <RecordTable data={filteredRecords} onRowClick={handleRowClick} />
+        <RecordTable
+          records={filteredRecords}
+          onRowClick={handleRowClick}
+          pagination={{
+            page,
+            pageSize,
+            total: apiData?.total ?? 0,
+            totalPages: apiData?.total_pages ?? 0,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+          }}
+        />
       )}
 
       <RecordPreviewSheet

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.source import Source
 from schemas.source import SourceCreate, SourceUpdate, SourceFilter
+from services.transaction import transaction
 from utils.helpers import get_paginated
 
 
@@ -43,10 +44,11 @@ class SourceService:
         return result.scalar_one_or_none()
 
     async def create(self, data: SourceCreate) -> Source:
-        source = Source(**data.model_dump())
-        self.session.add(source)
-        await self.session.commit()
-        await self.session.refresh(source)
+        async with transaction(self.session) as txn:
+            source = Source(**data.model_dump())
+            txn.add(source)
+            await txn.flush()
+            await txn.refresh(source)
         return source
 
     async def update(self, source_id: str, data: SourceUpdate) -> Source | None:
@@ -54,12 +56,13 @@ class SourceService:
         if not source:
             return None
 
-        update_data = data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(source, key, value)
-
-        await self.session.commit()
-        await self.session.refresh(source)
+        async with transaction(self.session) as txn:
+            update_data = data.model_dump(exclude_unset=True)
+            for key, value in update_data.items():
+                setattr(source, key, value)
+            txn.add(source)
+            await txn.flush()
+            await txn.refresh(source)
         return source
 
     async def delete(self, source_id: str) -> bool:
@@ -67,6 +70,6 @@ class SourceService:
         if not source:
             return False
 
-        await self.session.delete(source)
-        await self.session.commit()
+        async with transaction(self.session) as txn:
+            await txn.delete(source)
         return True

@@ -1,11 +1,11 @@
 "use client";
 
-import { Source } from "@/types";
-import { companyLabels, sourceTypeLabels } from "@/types/labels";
+import { Source } from "@/types/entities";
+import { companyLabels, sourceTypeLabels, priorityLabels, crawlStrategyLabels } from "@/types/labels";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Trash2, FileText, Layers, Search, AtSign } from "lucide-react";
 
 interface SourceTableProps {
   data: Source[];
@@ -13,10 +13,18 @@ interface SourceTableProps {
   onToggleStatus: (source: Source) => void;
   onEdit: (source: Source) => void;
   onDelete: (source: Source) => void;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange?: (size: number) => void;
+  };
 }
 
-function formatDate(dateString: string | null) {
-  if (!dateString) return "暂无";
+function formatDate(dateString: string | null | undefined) {
+  if (!dateString) return "-";
   return new Date(dateString).toLocaleString("zh-CN", {
     year: "numeric",
     month: "2-digit",
@@ -26,7 +34,7 @@ function formatDate(dateString: string | null) {
   });
 }
 
-export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete }: SourceTableProps) {
+export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete, pagination }: SourceTableProps) {
   const columns = [
     {
       key: "name",
@@ -39,15 +47,35 @@ export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete
       key: "company",
       header: "所属公司",
       render: (item: Source) => (
-        <Badge variant="outline">{companyLabels[item.company]}</Badge>
+        <Badge variant="outline">{companyLabels[item.company] || item.company}</Badge>
       ),
     },
     {
-      key: "type",
+      key: "source_type",
       header: "来源类型",
       render: (item: Source) => (
-        <Badge variant="secondary">{sourceTypeLabels[item.type]}</Badge>
+        <Badge variant="secondary">{sourceTypeLabels[item.source_type] || item.source_type}</Badge>
       ),
+    },
+    {
+      key: "crawl_strategy",
+      header: "采集策略",
+      render: (item: Source) => {
+        if (!item.crawl_strategy) return <span className="text-sm text-muted-foreground">-</span>;
+        const icons: Record<string, React.ComponentType<{ className?: string }>> = {
+          single_page: FileText,
+          multi_page: Layers,
+          search_keyword: Search,
+          social_media: AtSign,
+        };
+        const Icon = icons[item.crawl_strategy] || FileText;
+        return (
+          <Badge variant="outline" className="text-xs">
+            <Icon className="h-3 w-3 mr-1" />
+            {crawlStrategyLabels[item.crawl_strategy] || item.crawl_strategy}
+          </Badge>
+        );
+      },
     },
     {
       key: "url",
@@ -59,6 +87,7 @@ export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 truncate"
+          onClick={(e) => e.stopPropagation()}
         >
           {item.url}
           <ExternalLink className="h-3 w-3" />
@@ -66,30 +95,27 @@ export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete
       ),
     },
     {
-      key: "isActive",
+      key: "enabled",
       header: "状态",
       render: (item: Source) => (
-        <Badge variant={item.isActive ? "default" : "secondary"}>
-          {item.isActive ? "启用" : "停用"}
+        <Badge variant={item.enabled ? "default" : "secondary"}>
+          {item.enabled ? "启用" : "停用"}
         </Badge>
       ),
     },
     {
-      key: "fetchFrequency",
-      header: "采集频率",
-      render: () => <span className="text-sm text-muted-foreground">每日</span>,
-    },
-    {
       key: "priority",
       header: "优先级",
-      render: () => <Badge variant="outline">中</Badge>,
+      render: (item: Source) => (
+        <Badge variant="outline">{priorityLabels[item.priority] || item.priority}</Badge>
+      ),
     },
     {
-      key: "lastFetchedAt",
-      header: "最近采集时间",
+      key: "created_at",
+      header: "创建时间",
       render: (item: Source) => (
         <span className="text-sm text-muted-foreground">
-          {formatDate(item.lastFetchedAt)}
+          {formatDate(item.created_at)}
         </span>
       ),
     },
@@ -117,7 +143,7 @@ export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete
               onToggleStatus(item);
             }}
           >
-            {item.isActive ? "停用" : "启用"}
+            {item.enabled ? "停用" : "启用"}
           </Button>
           <Button
             variant="ghost"
@@ -142,6 +168,7 @@ export function SourceTable({ data, onRowClick, onToggleStatus, onEdit, onDelete
       data={data}
       rowKey={(item) => item.id}
       onRowClick={onRowClick}
+      pagination={pagination}
     />
   );
 }

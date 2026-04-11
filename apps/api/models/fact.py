@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin, generate_uuid
@@ -12,6 +12,12 @@ if TYPE_CHECKING:
 
 class Fact(Base, TimestampMixin):
     __tablename__ = "facts"
+    __table_args__ = (
+        Index("ix_facts_company", "company"),
+        Index("ix_facts_review_status", "review_status"),
+        Index("ix_facts_created_at", "created_at"),
+        Index("ix_facts_raw_record_id", "raw_record_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     raw_record_id: Mapped[str] = mapped_column(

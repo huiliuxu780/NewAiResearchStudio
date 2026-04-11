@@ -1,7 +1,7 @@
 "use client";
 
-import { RawRecord } from "@/types";
-import { companyLabels, eventTypeLabels, rawRecordStatusLabels } from "@/types/labels";
+import { RawRecord } from "@/types/entities";
+import { companyLabels, crawlStatusLabels } from "@/types/labels";
 import {
   Sheet,
   SheetContent,
@@ -11,9 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ExternalLink, Calendar, Globe, FileText, Sparkles } from "lucide-react";
+import { ExternalLink, Calendar, Globe } from "lucide-react";
 
 interface RecordPreviewSheetProps {
   record: RawRecord | null;
@@ -21,7 +19,8 @@ interface RecordPreviewSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function formatDate(dateString: string) {
+function formatDate(dateString: string | null | undefined) {
+  if (!dateString) return "-";
   return new Date(dateString).toLocaleString("zh-CN", {
     year: "numeric",
     month: "2-digit",
@@ -36,24 +35,19 @@ export function RecordPreviewSheet({ record, open, onOpenChange }: RecordPreview
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+      <SheetContent side="right" className="w-[500px] sm:max-w-[500px]">
         <SheetHeader>
           <SheetTitle>{record.title}</SheetTitle>
           <SheetDescription>
-            来源：{record.source.name}
+            <Badge variant="outline">{companyLabels[record.company] || record.company}</Badge>
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-col gap-4 py-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={record.status === "completed" ? "default" : "secondary"}>
-              {rawRecordStatusLabels[record.status]}
+          <div className="flex items-center gap-2">
+            <Badge variant={record.crawl_status === "success" ? "default" : "secondary"}>
+              {crawlStatusLabels[record.crawl_status] || record.crawl_status}
             </Badge>
-            <Badge variant="outline">{companyLabels[record.company]}</Badge>
-            <Badge variant="outline">{eventTypeLabels[record.eventType]}</Badge>
-            {record.tags.map((tag) => (
-              <Badge key={tag} variant="ghost">{tag}</Badge>
-            ))}
           </div>
 
           <Separator />
@@ -62,14 +56,14 @@ export function RecordPreviewSheet({ record, open, onOpenChange }: RecordPreview
             <div className="flex items-start gap-3">
               <Globe className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium">原文链接</p>
+                <p className="text-sm font-medium">来源地址</p>
                 <a
-                  href={record.originalUrl}
+                  href={record.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
                 >
-                  {record.originalUrl}
+                  {record.url}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -80,7 +74,7 @@ export function RecordPreviewSheet({ record, open, onOpenChange }: RecordPreview
               <div className="flex-1">
                 <p className="text-sm font-medium">发布时间</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(record.publishedAt)}
+                  {formatDate(record.published_at)}
                 </p>
               </div>
             </div>
@@ -90,47 +84,27 @@ export function RecordPreviewSheet({ record, open, onOpenChange }: RecordPreview
               <div className="flex-1">
                 <p className="text-sm font-medium">采集时间</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(record.fetchedAt)}
+                  {formatDate(record.crawled_at)}
                 </p>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-start gap-3">
-              <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">语言</p>
-                <p className="text-sm text-muted-foreground">中文</p>
-              </div>
+          <Separator />
+
+          {record.raw_content && (
+            <div>
+              <p className="text-sm font-medium mb-2">原始内容</p>
+              <p className="text-sm text-muted-foreground line-clamp-6">{record.raw_content}</p>
             </div>
-          </div>
+          )}
 
-          <Separator />
-
-          <div>
-            <p className="text-sm font-medium mb-2">原文内容</p>
-            <ScrollArea className="h-[300px] rounded-md border border-border p-4">
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {record.content}
-              </p>
-            </ScrollArea>
-          </div>
-
-          <Separator />
-
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1">
-              <ExternalLink className="h-4 w-4" />
-              查看原文
-            </Button>
-            <Button variant="outline" className="flex-1">
-              <FileText className="h-4 w-4" />
-              查看快照
-            </Button>
-            <Button variant="default" className="flex-1">
-              <Sparkles className="h-4 w-4" />
-              生成事实
-            </Button>
-          </div>
+          {record.error_message && (
+            <div>
+              <p className="text-sm font-medium mb-2 text-destructive">错误信息</p>
+              <p className="text-sm text-destructive">{record.error_message}</p>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

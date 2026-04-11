@@ -1,9 +1,7 @@
 "use client";
 
 import { FilterBar, FilterConfig } from "@/components/ui/filter-bar";
-import { Company, RawRecordStatus } from "@/types";
-import { companyLabels, rawRecordStatusLabels } from "@/types/labels";
-import { mockSources } from "@/mock/sources";
+import { companyLabels, crawlStatusLabels, dedupeStatusLabels } from "@/types/labels";
 
 interface RecordFilterProps {
   values: Record<string, string>;
@@ -11,50 +9,50 @@ interface RecordFilterProps {
   onReset?: () => void;
 }
 
-const companyOptions = Object.entries(companyLabels)
-  .filter(([key]) => key !== Company.OTHER)
-  .map(([value, label]) => ({ value, label }));
-
-const sourceOptions = mockSources.map((source) => ({
-  value: source.id,
-  label: source.name,
-}));
-
-const statusOptions = Object.entries(rawRecordStatusLabels).map(([value, label]) => ({
+const companyOptions = Object.entries(companyLabels).map(([value, label]) => ({
   value,
   label,
 }));
 
-const dedupeOptions = [
-  { value: "deduped", label: "已去重" },
-  { value: "pending", label: "待去重" },
-];
+const crawlStatusOptions = Object.entries(crawlStatusLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
+
+const dedupeStatusOptions = Object.entries(dedupeStatusLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 export function RecordFilter({ values, onChange, onReset }: RecordFilterProps) {
   const filters: FilterConfig[] = [
     {
-      key: "source",
-      type: "select",
-      label: "来源",
-      options: sourceOptions,
-    },
-    {
       key: "company",
       type: "select",
       label: "所属公司",
+      tooltip: "按公司筛选原始记录",
       options: companyOptions,
     },
     {
-      key: "status",
+      key: "crawl_status",
       type: "select",
       label: "采集状态",
-      options: statusOptions,
+      tooltip: "数据采集的状态，包括待处理、成功、失败",
+      options: crawlStatusOptions,
     },
     {
-      key: "dedupe",
+      key: "dedupe_status",
       type: "select",
       label: "去重状态",
-      options: dedupeOptions,
+      tooltip: "记录的去重状态，包括新记录、重复、已抽取等",
+      options: dedupeStatusOptions,
+    },
+    {
+      key: "keyword",
+      type: "input",
+      label: "关键词搜索",
+      placeholder: "搜索标题或内容...",
+      tooltip: "在原始记录的标题和内容中搜索关键词",
     },
   ];
 

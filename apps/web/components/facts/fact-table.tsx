@@ -1,7 +1,7 @@
 "use client";
 
-import { Fact, FactStatus } from "@/types";
-import { companyLabels, eventTypeLabels, factStatusLabels } from "@/types/labels";
+import { Fact } from "@/types/entities";
+import { companyLabels, eventTypeLabels, reviewStatusLabels, importanceLevelLabels, confidenceLevelLabels } from "@/types/labels";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { ReviewActions } from "./review-actions";
@@ -12,6 +12,14 @@ interface FactTableProps {
   onApprove: (fact: Fact) => void;
   onReject: (fact: Fact) => void;
   onEdit: (fact: Fact) => void;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange?: (size: number) => void;
+  };
 }
 
 export function FactTable({
@@ -20,8 +28,10 @@ export function FactTable({
   onApprove,
   onReject,
   onEdit,
+  pagination,
 }: FactTableProps) {
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("zh-CN", {
       year: "numeric",
       month: "2-digit",
@@ -29,16 +39,14 @@ export function FactTable({
     });
   };
 
-  const getStatusBadgeVariant = (status: FactStatus) => {
+  const getReviewStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case FactStatus.APPROVED:
+      case "confirmed":
         return "default";
-      case FactStatus.PENDING_REVIEW:
+      case "pending":
         return "secondary";
-      case FactStatus.REJECTED:
+      case "rejected":
         return "destructive";
-      case FactStatus.DRAFT:
-        return "outline";
       default:
         return "outline";
     }
@@ -46,10 +54,10 @@ export function FactTable({
 
   const columns = [
     {
-      key: "summary",
+      key: "fact_summary",
       header: "事实摘要",
       render: (fact: Fact) => (
-        <span className="text-sm line-clamp-2">{fact.summary}</span>
+        <span className="text-sm line-clamp-2">{fact.fact_summary}</span>
       ),
       className: "max-w-[200px]",
     },
@@ -57,40 +65,45 @@ export function FactTable({
       key: "company",
       header: "所属公司",
       render: (fact: Fact) => (
-        <Badge variant="outline">{companyLabels[fact.company]}</Badge>
+        <Badge variant="outline">{companyLabels[fact.company] || fact.company}</Badge>
       ),
     },
     {
-      key: "eventType",
+      key: "event_type",
       header: "事件类型",
       render: (fact: Fact) => (
-        <Badge variant="ghost">{eventTypeLabels[fact.eventType]}</Badge>
+        <Badge variant="ghost">{eventTypeLabels[fact.event_type] || fact.event_type}</Badge>
       ),
     },
     {
-      key: "importance",
+      key: "importance_level",
       header: "重要性",
       render: (fact: Fact) => (
-        <Badge variant={fact.status === FactStatus.PENDING_REVIEW ? "secondary" : "outline"}>
-          {fact.status === FactStatus.PENDING_REVIEW ? "高" : "中"}
-        </Badge>
+        <Badge variant="outline">{importanceLevelLabels[fact.importance_level] || fact.importance_level}</Badge>
       ),
     },
     {
-      key: "createdAt",
-      header: "发布时间",
+      key: "confidence",
+      header: "置信度",
+      render: (fact: Fact) => (
+        <Badge variant="outline">{confidenceLevelLabels[fact.confidence] || fact.confidence}</Badge>
+      ),
+    },
+    {
+      key: "created_at",
+      header: "创建时间",
       render: (fact: Fact) => (
         <span className="text-sm text-muted-foreground">
-          {formatDate(fact.createdAt)}
+          {formatDate(fact.created_at)}
         </span>
       ),
     },
     {
-      key: "status",
+      key: "review_status",
       header: "复核状态",
       render: (fact: Fact) => (
-        <Badge variant={getStatusBadgeVariant(fact.status)}>
-          {factStatusLabels[fact.status]}
+        <Badge variant={getReviewStatusBadgeVariant(fact.review_status)}>
+          {reviewStatusLabels[fact.review_status] || fact.review_status}
         </Badge>
       ),
     },
@@ -116,6 +129,7 @@ export function FactTable({
       rowKey={(fact) => fact.id}
       onRowClick={onRowClick}
       emptyText="暂无事实数据"
+      pagination={pagination}
     />
   );
 }

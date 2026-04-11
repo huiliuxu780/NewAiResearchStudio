@@ -1,8 +1,6 @@
 "use client";
 
-import { Fact, FactStatus } from "@/types";
-import { factStatusLabels } from "@/types/labels";
-import { Badge } from "@/components/ui/badge";
+import { Fact } from "@/types/entities";
 import { Button } from "@/components/ui/button";
 import { Check, X, Edit } from "lucide-react";
 
@@ -19,53 +17,44 @@ export function ReviewActions({
   onReject,
   onEdit,
 }: ReviewActionsProps) {
-  const getStatusBadgeVariant = (status: FactStatus) => {
-    switch (status) {
-      case FactStatus.APPROVED:
-        return "default";
-      case FactStatus.PENDING_REVIEW:
-        return "secondary";
-      case FactStatus.REJECTED:
-        return "destructive";
-      case FactStatus.DRAFT:
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
-
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant={getStatusBadgeVariant(fact.status)}>
-        {factStatusLabels[fact.status]}
-      </Badge>
-      {fact.status === FactStatus.PENDING_REVIEW && (
-        <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1">
+      {fact.review_status === "pending" && (
+        <>
           <Button
             variant="outline"
-            size="xs"
-            onClick={() => onApprove(fact)}
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onApprove(fact);
+            }}
           >
-            <Check className="size-3" />
+            <Check className="h-3 w-3" />
             确认
           </Button>
           <Button
             variant="outline"
-            size="xs"
-            onClick={() => onEdit(fact)}
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(fact);
+            }}
           >
-            <Edit className="size-3" />
+            <Edit className="h-3 w-3" />
             修改
           </Button>
           <Button
             variant="destructive"
-            size="xs"
-            onClick={() => onReject(fact)}
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReject(fact);
+            }}
           >
-            <X className="size-3" />
+            <X className="h-3 w-3" />
             驳回
           </Button>
-        </div>
+        </>
       )}
     </div>
   );

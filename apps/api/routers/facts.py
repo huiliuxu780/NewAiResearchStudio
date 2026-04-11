@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from middleware import log_operation
 from models.fact import Fact
 from schemas import (
     PaginatedResponse,
@@ -12,6 +13,7 @@ from schemas import (
     SuccessResponse,
 )
 from services import get_session
+from services.transaction import transaction
 from utils.helpers import get_paginated
 
 router = APIRouter(prefix="/facts", tags=["facts"])
@@ -77,14 +79,16 @@ async def list_facts(
 
 
 @router.post("/", response_model=FactResponse, status_code=201)
+@log_operation(action="create", entity_type="fact")
 async def create_fact(
     data: FactCreate,
     session: AsyncSession = Depends(get_session),
 ):
-    fact = Fact(**data.model_dump())
-    session.add(fact)
-    await session.commit()
-    await session.refresh(fact)
+    async with transaction(session) as txn:
+        fact = Fact(**data.model_dump())
+        txn.add(fact)
+        await txn.flush()
+        await txn.refresh(fact)
     return FactResponse.model_validate(fact)
 
 
@@ -101,6 +105,7 @@ async def get_fact(
 
 
 @router.put("/{fact_id}/review", response_model=SuccessResponse)
+@log_operation(action="update", entity_type="fact", entity_id_param="fact_id")
 async def update_review_status(
     fact_id: str,
     data: ReviewUpdate,
@@ -115,5 +120,7 @@ async def update_review_status(
     if data.needs_review is not None:
         fact.needs_review = data.needs_review
 
-    await session.commit()
+    async with transaction(session) as txn:
+        txn.add(fact)
+        await txn.flush()
     return SuccessResponse(message="Review status updated successfully")

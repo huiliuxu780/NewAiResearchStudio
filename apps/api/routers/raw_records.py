@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.raw_record import RawRecord
 from schemas import PaginatedResponse, RawRecordResponse, RawRecordFilter, RawRecordStatusUpdate, SuccessResponse, RawRecordCreate
 from services import get_session
+from services.transaction import transaction
 from utils.helpers import get_paginated
 
 router = APIRouter(prefix="/raw-records", tags=["raw-records"])
@@ -15,10 +16,11 @@ async def create_raw_record(
     data: RawRecordCreate,
     session: AsyncSession = Depends(get_session),
 ):
-    record = RawRecord(**data.model_dump())
-    session.add(record)
-    await session.commit()
-    await session.refresh(record)
+    async with transaction(session) as txn:
+        record = RawRecord(**data.model_dump())
+        txn.add(record)
+        await txn.flush()
+        await txn.refresh(record)
     return RawRecordResponse.model_validate(record)
 
 
@@ -103,5 +105,7 @@ async def update_raw_record_status(
     if data.error_message is not None:
         record.error_message = data.error_message
 
-    await session.commit()
+    async with transaction(session) as txn:
+        txn.add(record)
+        await txn.flush()
     return SuccessResponse(message="Raw record status updated successfully")

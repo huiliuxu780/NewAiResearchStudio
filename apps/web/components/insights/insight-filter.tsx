@@ -1,110 +1,65 @@
 "use client";
 
-import { Company, InsightType, InsightStatus, Priority } from "@/types";
-import { companyLabels, insightTypeLabels, insightStatusLabels, priorityLabels } from "@/types/labels";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterBar, FilterConfig } from "@/components/ui/filter-bar";
+import { companyLabels, insightTypeLabels, impactLevelLabels, confidenceLevelLabels } from "@/types/labels";
 
 interface InsightFilterProps {
-  company: Company | "";
-  type: InsightType | "";
-  status: InsightStatus | "";
-  priority: Priority | "";
-  onCompanyChange: (value: Company | "") => void;
-  onTypeChange: (value: InsightType | "") => void;
-  onStatusChange: (value: InsightStatus | "") => void;
-  onPriorityChange: (value: Priority | "") => void;
+  values: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+  onReset?: () => void;
 }
 
-export function InsightFilter({
-  company,
-  type,
-  status,
-  priority,
-  onCompanyChange,
-  onTypeChange,
-  onStatusChange,
-  onPriorityChange,
-}: InsightFilterProps) {
-  const companies = Object.values(Company);
-  const types = Object.values(InsightType);
-  const statuses = Object.values(InsightStatus);
-  const priorities = Object.values(Priority);
+const companyOptions = Object.entries(companyLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Select
-        value={company || undefined}
-        onValueChange={(value) => onCompanyChange((value ?? "") as Company | "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="公司筛选" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部公司</SelectItem>
-          {companies.map((c) => (
-            <SelectItem key={c} value={c}>
-              {companyLabels[c]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+const insightTypeOptions = Object.entries(insightTypeLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-      <Select
-        value={type || undefined}
-        onValueChange={(value) => onTypeChange((value ?? "") as InsightType | "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="结论类型" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部类型</SelectItem>
-          {types.map((t) => (
-            <SelectItem key={t} value={t}>
-              {insightTypeLabels[t]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+const impactLevelOptions = Object.entries(impactLevelLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-      <Select
-        value={status || undefined}
-        onValueChange={(value) => onStatusChange((value ?? "") as InsightStatus | "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="状态筛选" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部状态</SelectItem>
-          {statuses.map((s) => (
-            <SelectItem key={s} value={s}>
-              {insightStatusLabels[s]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+const confidenceOptions = Object.entries(confidenceLevelLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
-      <Select
-        value={priority || undefined}
-        onValueChange={(value) => onPriorityChange((value ?? "") as Priority | "")}
-      >
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="重要性" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">全部</SelectItem>
-          {priorities.map((p) => (
-            <SelectItem key={p} value={p}>
-              {priorityLabels[p]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
+export function InsightFilter({ values, onChange, onReset }: InsightFilterProps) {
+  const filters: FilterConfig[] = [
+    {
+      key: "company",
+      type: "select",
+      label: "所属公司",
+      tooltip: "按公司筛选研究结论",
+      options: companyOptions,
+    },
+    {
+      key: "insight_type",
+      type: "select",
+      label: "结论类型",
+      tooltip: "研究结论的类型，如竞争优势、风险预警、增长机会等",
+      options: insightTypeOptions,
+    },
+    {
+      key: "impact_level",
+      type: "select",
+      label: "影响等级",
+      tooltip: "结论对业务的影响程度，分为高、中、低",
+      options: impactLevelOptions,
+    },
+    {
+      key: "confidence",
+      type: "select",
+      label: "置信度",
+      tooltip: "AI生成结论的可信度评估",
+      options: confidenceOptions,
+    },
+  ];
+
+  return <FilterBar filters={filters} values={values} onChange={onChange} onReset={onReset} />;
 }

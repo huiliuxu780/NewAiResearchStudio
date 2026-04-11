@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from middleware import log_operation
 from models.insight import Insight
 from schemas import PaginatedResponse, InsightResponse, InsightFilter, InsightCreate, SuccessResponse
 from services import get_session
+from services.transaction import transaction
 from utils.helpers import get_paginated
 
 router = APIRouter(prefix="/insights", tags=["insights"])
@@ -58,14 +60,16 @@ async def list_insights(
 
 
 @router.post("/", response_model=InsightResponse, status_code=201)
+@log_operation(action="create", entity_type="insight")
 async def create_insight(
     data: InsightCreate,
     session: AsyncSession = Depends(get_session),
 ):
-    insight = Insight(**data.model_dump())
-    session.add(insight)
-    await session.commit()
-    await session.refresh(insight)
+    async with transaction(session) as txn:
+        insight = Insight(**data.model_dump())
+        txn.add(insight)
+        await txn.flush()
+        await txn.refresh(insight)
     return InsightResponse.model_validate(insight)
 
 

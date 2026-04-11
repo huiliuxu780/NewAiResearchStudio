@@ -1,90 +1,76 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Fact, Company, EventType, FactStatus } from "@/types";
-import { mockFacts } from "@/mock/facts";
+import { Fact } from "@/types/entities";
 import { FactTable } from "@/components/facts/fact-table";
 import { FactFilter } from "@/components/facts/fact-filter";
 import { FactDetailSheet } from "@/components/facts/fact-detail-sheet";
 import { useFacts, useUpdateFactReview } from "@/hooks";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+import { useSWRConfig } from "swr";
 
 export default function FactsPage() {
-  const [facts, setFacts] = useState<Fact[]>(mockFacts);
   const [selectedFact, setSelectedFact] = useState<Fact | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const [company, setCompany] = useState<Company | "">("");
-  const [eventType, setEventType] = useState<EventType | "">("");
-  const [status, setStatus] = useState<FactStatus | "">("");
-  const [needReview, setNeedReview] = useState<string | null>(null);
-
-  const { data: apiData, isLoading } = useFacts({
-    company: company || undefined,
-    event_type: eventType || undefined,
-    status: status || undefined,
+  const { data: apiData, isLoading, error } = useFacts({
+    company: filters.company && filters.company !== "all" ? filters.company : undefined,
+    event_type: filters.event_type && filters.event_type !== "all" ? filters.event_type : undefined,
+    review_status: filters.review_status && filters.review_status !== "all" ? filters.review_status : undefined,
+    importance_level: filters.importance_level && filters.importance_level !== "all" ? filters.importance_level : undefined,
+    page,
+    page_size: pageSize,
   });
 
+  const { mutate } = useSWRConfig();
   const { trigger: triggerReview } = useUpdateFactReview();
 
   const filteredFacts = useMemo(() => {
-    if (USE_MOCK) {
-      return facts.filter((fact) => {
-        if (company && fact.company !== company) return false;
-        if (eventType && fact.eventType !== eventType) return false;
-        if (status && fact.status !== status) return false;
-        if (needReview === "yes" && fact.status !== FactStatus.PENDING_REVIEW) return false;
-        if (needReview === "no" && fact.status === FactStatus.PENDING_REVIEW) return false;
-        return true;
-      });
-    }
-    let result = apiData?.items || [];
-    if (needReview === "yes") {
-      result = result.filter((fact) => fact.status === FactStatus.PENDING_REVIEW);
-    } else if (needReview === "no") {
-      result = result.filter((fact) => fact.status !== FactStatus.PENDING_REVIEW);
-    }
-    return result;
-  }, [facts, apiData, company, eventType, status, needReview]);
+    return apiData?.items || [];
+  }, [apiData]);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({});
+    setPage(1);
+  };
 
   const handleRowClick = (fact: Fact) => {
     setSelectedFact(fact);
     setSheetOpen(true);
   };
 
-  const handleApprove = (fact: Fact) => {
-    if (USE_MOCK) {
-      setFacts((prev) =>
-        prev.map((f) =>
-          f.id === fact.id
-            ? { ...f, status: FactStatus.APPROVED, reviewedBy: "当前用户", reviewedAt: new Date().toISOString() }
-            : f
-        )
-      );
-    } else {
-      triggerReview({ id: fact.id, data: { status: "approved", reviewed_by: "当前用户" } });
-    }
+  const handleApprove = async (fact: Fact) => {
+    await triggerReview({ id: fact.id, data: { review_status: "confirmed" } });
+    mutate(['facts']);
   };
 
-  const handleReject = (fact: Fact) => {
-    if (USE_MOCK) {
-      setFacts((prev) =>
-        prev.map((f) =>
-          f.id === fact.id
-            ? { ...f, status: FactStatus.REJECTED, reviewedBy: "当前用户", reviewedAt: new Date().toISOString() }
-            : f
-        )
-      );
-    } else {
-      triggerReview({ id: fact.id, data: { status: "rejected", reviewed_by: "当前用户" } });
-    }
+  const handleReject = async (fact: Fact) => {
+    await triggerReview({ id: fact.id, data: { review_status: "rejected" } });
+    mutate(['facts']);
   };
 
   const handleEdit = (fact: Fact) => {
     setSelectedFact(fact);
     setSheetOpen(true);
   };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground">标准化事实</h1>
+        <div className="text-center py-8 text-destructive">
+          加载失败: {error.message}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -96,17 +82,12 @@ export default function FactsPage() {
       </div>
 
       <FactFilter
-        company={company}
-        eventType={eventType}
-        status={status}
-        needReview={needReview}
-        onCompanyChange={setCompany}
-        onEventTypeChange={setEventType}
-        onStatusChange={setStatus}
-        onNeedReviewChange={(value) => setNeedReview(value)}
+        values={filters}
+        onChange={handleFilterChange}
+        onReset={handleResetFilters}
       />
 
-      {isLoading && !USE_MOCK ? (
+      {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">加载中...</div>
       ) : (
         <FactTable
@@ -115,6 +96,17 @@ export default function FactsPage() {
           onApprove={handleApprove}
           onReject={handleReject}
           onEdit={handleEdit}
+          pagination={{
+            page,
+            pageSize,
+            total: apiData?.total ?? 0,
+            totalPages: apiData?.total_pages ?? 0,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+          }}
         />
       )}
 

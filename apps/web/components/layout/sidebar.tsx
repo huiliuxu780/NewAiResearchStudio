@@ -20,6 +20,9 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ScrollText,
+  MessageSquare,
+  Globe,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,10 +32,13 @@ const iconMap: Record<string, React.ReactNode> = {
   'raw-records': <FileText className="h-4 w-4" />,
   'facts': <CheckCircle className="h-4 w-4" />,
   'insights': <Lightbulb className="h-4 w-4" />,
+  'prompts': <MessageSquare className="h-4 w-4" />,
   'models': <Brain className="h-4 w-4" />,
+  'tasks': <Globe className="h-4 w-4" />,
   'products': <Package className="h-4 w-4" />,
   'topics': <FolderOpen className="h-4 w-4" />,
-  'week-reports': <Calendar className="h-4 w-4" />,
+  'reports': <Calendar className="h-4 w-4" />,
+  'logs': <ScrollText className="h-4 w-4" />,
   'settings': <Settings className="h-4 w-4" />,
 };
 

@@ -1,324 +1,135 @@
 "use client";
 
-import { useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import * as React from "react";
 import {
-  mockModelConfigs,
-  mockPromptTemplates,
-  mockStorageConfigs,
-  mockCrawlConfigs,
-  mockCronTasks,
-} from "@/mock/settings";
-import { ExternalLink } from "lucide-react";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { CompanySettings } from "@/components/settings/company-settings";
+import { AiDefaultSettings } from "@/components/settings/ai-default-settings";
+import { NotificationSettings } from "@/components/settings/notification-settings";
+import { SystemSettings } from "@/components/settings/system-settings";
+import {
+  Building2,
+  Brain,
+  Bell,
+  Settings2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
+
+type SettingsTab = "company" | "ai_defaults" | "notifications" | "system";
+
+interface TabConfig {
+  id: SettingsTab;
+  label: string;
+  icon: React.ElementType;
+  component: React.ComponentType<{ className?: string }>;
+}
+
+const tabs: TabConfig[] = [
+  {
+    id: "company",
+    label: "公司信息",
+    icon: Building2,
+    component: CompanySettings,
+  },
+  {
+    id: "ai_defaults",
+    label: "AI 默认配置",
+    icon: Brain,
+    component: AiDefaultSettings,
+  },
+  {
+    id: "notifications",
+    label: "通知设置",
+    icon: Bell,
+    component: NotificationSettings,
+  },
+  {
+    id: "system",
+    label: "系统参数",
+    icon: Settings2,
+    component: SystemSettings,
+  },
+];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("model");
+  const [activeTab, setActiveTab] = React.useState<SettingsTab>("company");
+  const [saveStatus, setSaveStatus] = React.useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  };
+  // Auto-dismiss save status after 5 seconds
+  React.useEffect(() => {
+    if (saveStatus) {
+      const timer = setTimeout(() => {
+        setSaveStatus(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveStatus]);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">系统设置</h1>
+      {/* Page Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">系统设置</h1>
+          <p className="text-sm text-muted-foreground">
+            管理系统配置、公司信息、AI 模型参数和通知设置
+          </p>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList variant="line" className="w-full justify-start">
-          <TabsTrigger value="model">模型配置</TabsTrigger>
-          <TabsTrigger value="prompt">Prompt模板</TabsTrigger>
-          <TabsTrigger value="storage">存储配置</TabsTrigger>
-          <TabsTrigger value="crawl">抓取策略</TabsTrigger>
-          <TabsTrigger value="cron">定时任务</TabsTrigger>
-          <TabsTrigger value="logs">系统日志</TabsTrigger>
+      {/* Save Status Banner */}
+      {saveStatus && (
+        <div
+          className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+            saveStatus.type === "success"
+              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+              : "border-destructive/20 bg-destructive/10 text-destructive"
+          }`}
+          role="alert"
+        >
+          {saveStatus.type === "success" ? (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          ) : (
+            <XCircle className="h-4 w-4 shrink-0" />
+          )}
+          <span>{saveStatus.message}</span>
+        </div>
+      )}
+
+      {/* Settings Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList className="w-full overflow-x-auto sm:w-fit">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
-        <TabsContent value="model" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Qwen API 配置</CardTitle>
-              <CardDescription>配置通义千问大模型API参数</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {mockModelConfigs.map((config) => (
-                <div key={config.id} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">配置名称</label>
-                      <Input value={config.name} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">服务商</label>
-                      <Input value={config.provider} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">API Key</label>
-                      <Input value={config.apiKey} type="password" disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">API Endpoint</label>
-                      <Input value={config.apiEndpoint} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">模型版本</label>
-                      <Input value={config.modelVersion} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">状态</label>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={config.isActive ? "default" : "outline"}>
-                          {config.isActive ? "已启用" : "已禁用"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      最后更新: {formatDate(config.updatedAt)}
-                    </span>
-                    <Button variant="outline" size="sm" disabled>
-                      编辑配置
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="prompt" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Prompt模板配置</CardTitle>
-              <CardDescription>管理系统Prompt模板</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockPromptTemplates.map((template) => (
-                  <div key={template.id} className="rounded-lg border border-border p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="font-medium">{template.name}</h4>
-                        <p className="text-sm text-muted-foreground">{template.description}</p>
-                      </div>
-                      <Badge variant="outline">{template.category}</Badge>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="space-y-2">
-                      <span className="text-xs text-muted-foreground">变量参数</span>
-                      <div className="flex flex-wrap gap-1">
-                        {template.variables.map((v) => (
-                          <Badge key={v} variant="ghost" className="text-xs">
-                            {v}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        最后更新: {formatDate(template.updatedAt)}
-                      </span>
-                      <Button variant="ghost" size="sm" disabled>
-                        查看详情
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="storage" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>存储配置</CardTitle>
-              <CardDescription>配置数据存储参数</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {mockStorageConfigs.map((config) => (
-                <div key={config.id} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">存储类型</label>
-                      <Input value={config.type} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">主机地址</label>
-                      <Input value={config.host} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">端口</label>
-                      <Input value={config.port.toString()} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">数据库</label>
-                      <Input value={config.database} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">用户名</label>
-                      <Input value={config.username} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">状态</label>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={config.isActive ? "default" : "outline"}>
-                          {config.isActive ? "已连接" : "已断开"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      最后更新: {formatDate(config.updatedAt)}
-                    </span>
-                    <Button variant="outline" size="sm" disabled>
-                      编辑配置
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="crawl" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Crawl4AI 配置</CardTitle>
-              <CardDescription>配置数据抓取策略</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockCrawlConfigs.map((config) => (
-                  <div key={config.id} className="rounded-lg border border-border p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h4 className="font-medium">{config.name}</h4>
-                        <p className="text-sm text-muted-foreground">{config.targetUrl}</p>
-                      </div>
-                      <Badge variant={config.isActive ? "default" : "outline"}>
-                        {config.isActive ? "已启用" : "已禁用"}
-                      </Badge>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="grid grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">抓取间隔</span>
-                        <p className="font-medium">{config.crawlInterval}秒</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">最大深度</span>
-                        <p className="font-medium">{config.maxDepth}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">超时时间</span>
-                        <p className="font-medium">{config.timeout}秒</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">User Agent</span>
-                        <p className="font-medium text-xs">{config.userAgent}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        最后更新: {formatDate(config.updatedAt)}
-                      </span>
-                      <Button variant="ghost" size="sm" disabled>
-                        编辑配置
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="cron" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>定时任务配置</CardTitle>
-              <CardDescription>管理系统定时任务</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockCronTasks.map((task) => (
-                  <div key={task.id} className="rounded-lg border border-border p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="font-medium">{task.name}</h4>
-                        <p className="text-sm text-muted-foreground">{task.description}</p>
-                      </div>
-                      <Badge variant={task.isActive ? "default" : "outline"}>
-                        {task.isActive ? "已启用" : "已禁用"}
-                      </Badge>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">执行计划</span>
-                        <p className="font-medium">{task.schedule}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">上次执行</span>
-                        <p className="font-medium">
-                          {task.lastRunAt ? formatDate(task.lastRunAt) : "未执行"}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">下次执行</span>
-                        <p className="font-medium">
-                          {task.nextRunAt ? formatDate(task.nextRunAt) : "未计划"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        命令: {task.command}
-                      </span>
-                      <Button variant="ghost" size="sm" disabled>
-                        编辑任务
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="logs" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>系统日志</CardTitle>
-              <CardDescription>查看系统运行日志</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-border bg-muted/30 p-6 text-center">
-                <p className="text-muted-foreground mb-4">
-                  系统日志功能正在开发中，敬请期待
-                </p>
-                <Button variant="outline" disabled>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  查看日志入口
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {tabs.map((tab) => {
+          const Component = tab.component;
+          return (
+            <TabsContent key={tab.id} value={tab.id}>
+              <Component className="max-w-3xl" />
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );

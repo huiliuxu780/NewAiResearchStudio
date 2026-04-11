@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, generate_uuid
@@ -12,6 +12,12 @@ if TYPE_CHECKING:
 
 class RawRecord(Base):
     __tablename__ = "raw_records"
+    __table_args__ = (
+        Index("ix_raw_records_company", "company"),
+        Index("ix_raw_records_crawl_status", "crawl_status"),
+        Index("ix_raw_records_source_id", "source_id"),
+        Index("ix_raw_records_content_hash", "content_hash"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     source_id: Mapped[str] = mapped_column(

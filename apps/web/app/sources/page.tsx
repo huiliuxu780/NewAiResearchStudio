@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Source } from "@/types";
-import { mockSources } from "@/mock/sources";
+import { Source } from "@/types/entities";
 import { SourceTable } from "@/components/sources/source-table";
 import { SourceFilter } from "@/components/sources/source-filter";
 import { SourceDetailSheet } from "@/components/sources/source-detail-sheet";
@@ -12,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useSources, useCreateSource, useUpdateSource, useDeleteSource } from "@/hooks";
 import { useSWRConfig } from "swr";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+import { CreateSourceData, UpdateSourceData } from "@/lib/api/sources";
 
 export default function SourcesPage() {
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
@@ -24,15 +22,19 @@ export default function SourcesPage() {
   const [deletingSource, setDeletingSource] = useState<Source | null>(null);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({
     company: "all",
-    type: "all",
-    status: "all",
+    source_type: "all",
+    enabled: "all",
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const { mutate } = useSWRConfig();
-  const { data: apiData, isLoading } = useSources({
+  const { data: apiData, isLoading, error } = useSources({
     company: filterValues.company !== "all" ? filterValues.company : undefined,
-    type: filterValues.type !== "all" ? filterValues.type : undefined,
-    is_active: filterValues.status !== "all" ? filterValues.status === "active" : undefined,
+    source_type: filterValues.source_type !== "all" ? filterValues.source_type : undefined,
+    enabled: filterValues.enabled !== "all" ? filterValues.enabled === "true" : undefined,
+    page,
+    page_size: pageSize,
   });
 
   const createMutation = useCreateSource();
@@ -40,32 +42,17 @@ export default function SourcesPage() {
   const deleteMutation = useDeleteSource();
 
   const sources = useMemo(() => {
-    if (USE_MOCK) {
-      return mockSources.filter((source) => {
-        if (filterValues.company !== "all" && source.company !== filterValues.company) {
-          return false;
-        }
-        if (filterValues.type !== "all" && source.type !== filterValues.type) {
-          return false;
-        }
-        if (filterValues.status !== "all") {
-          const isActive = filterValues.status === "active";
-          if (source.isActive !== isActive) {
-            return false;
-          }
-        }
-        return true;
-      });
-    }
     return apiData?.items || [];
-  }, [apiData, filterValues]);
+  }, [apiData]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilterValues((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
   };
 
   const handleFilterReset = () => {
-    setFilterValues({ company: "all", type: "all", status: "all" });
+    setFilterValues({ company: "all", source_type: "all", enabled: "all" });
+    setPage(1);
   };
 
   const handleRowClick = (source: Source) => {
@@ -73,16 +60,9 @@ export default function SourcesPage() {
     setSheetOpen(true);
   };
 
-  const handleToggleStatus = (source: Source) => {
-    if (USE_MOCK) {
-      console.log("Mock mode: toggle status for", source.id);
-    } else {
-      updateMutation.trigger({
-        is_active: !source.isActive,
-      }).then(() => {
-        mutate(['sources']);
-      });
-    }
+  const handleToggleStatus = async (source: Source) => {
+    await updateMutation.trigger({ enabled: !source.enabled });
+    mutate(['sources']);
   };
 
   const handleCreateClick = () => {
@@ -101,23 +81,21 @@ export default function SourcesPage() {
   };
 
   const handleFormSubmit = async (data: SourceFormData) => {
-    if (USE_MOCK) {
-      console.log("Mock mode: create/update source", data);
-      setFormDialogOpen(false);
-      return;
-    }
-
-    const apiData = {
+    const apiData: CreateSourceData & UpdateSourceData = {
       name: data.name,
       company: data.company,
-      type: data.source_type,
+      source_type: data.source_type,
       url: data.url,
-      description: data.notes,
-      is_active: data.enabled,
+      notes: data.notes,
+      enabled: data.enabled,
       schedule: data.schedule,
       parser_type: data.parser_type,
       priority: data.priority,
-      notes: data.notes,
+      // 采集策略相关字段
+      crawl_strategy: data.crawl_strategy,
+      crawl_config: data.crawl_config,
+      social_platform: data.social_platform || null,
+      social_account_id: data.social_account_id || null,
     };
 
     try {
@@ -134,12 +112,6 @@ export default function SourcesPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (USE_MOCK) {
-      console.log("Mock mode: delete source", deletingSource?.id);
-      setDeleteDialogOpen(false);
-      return;
-    }
-
     if (deletingSource) {
       try {
         await deleteMutation.trigger(deletingSource.id);
@@ -150,6 +122,17 @@ export default function SourcesPage() {
       }
     }
   };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground">信息源管理</h1>
+        <div className="text-center py-8 text-destructive">
+          加载失败: {error.message}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -167,7 +150,7 @@ export default function SourcesPage() {
         onReset={handleFilterReset}
       />
 
-      {isLoading && !USE_MOCK ? (
+      {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">加载中...</div>
       ) : (
         <SourceTable
@@ -176,6 +159,17 @@ export default function SourcesPage() {
           onToggleStatus={handleToggleStatus}
           onEdit={handleEditClick}
           onDelete={handleDeleteClick}
+          pagination={{
+            page,
+            pageSize,
+            total: apiData?.total ?? 0,
+            totalPages: apiData?.total_pages ?? 0,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+          }}
         />
       )}
 
@@ -198,11 +192,7 @@ export default function SourcesPage() {
         onOpenChange={setDeleteDialogOpen}
         title="删除信息源"
         description={`确定要删除信息源 "${deletingSource?.name}" 吗？此操作不可撤销。`}
-        confirmText="删除"
-        cancelText="取消"
-        variant="destructive"
         onConfirm={handleDeleteConfirm}
-        loading={deleteMutation.isMutating}
       />
     </div>
   );

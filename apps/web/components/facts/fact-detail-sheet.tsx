@@ -1,7 +1,7 @@
 "use client";
 
-import { Fact } from "@/types";
-import { companyLabels, eventTypeLabels, factStatusLabels } from "@/types/labels";
+import { Fact } from "@/types/entities";
+import { companyLabels, eventTypeLabels, reviewStatusLabels, importanceLevelLabels, confidenceLevelLabels } from "@/types/labels";
 import {
   Sheet,
   SheetContent,
@@ -10,8 +10,8 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { ExternalLink, Calendar, Globe } from "lucide-react";
 
 interface FactDetailSheetProps {
   fact: Fact | null;
@@ -19,107 +19,110 @@ interface FactDetailSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function FactDetailSheet({
-  fact,
-  open,
-  onOpenChange,
-}: FactDetailSheetProps) {
-  if (!fact) return null;
+function formatDate(dateString: string | null | undefined) {
+  if (!dateString) return "-";
+  return new Date(dateString).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+export function FactDetailSheet({ fact, open, onOpenChange }: FactDetailSheetProps) {
+  if (!fact) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg">
+      <SheetContent side="right" className="w-[500px] sm:max-w-[500px]">
         <SheetHeader>
-          <SheetTitle>{fact.title}</SheetTitle>
-          <SheetDescription>{fact.summary}</SheetDescription>
+          <SheetTitle>事实详情</SheetTitle>
+          <SheetDescription className="line-clamp-2">{fact.fact_summary}</SheetDescription>
         </SheetHeader>
-        <ScrollArea className="h-[calc(100vh-120px)]">
-          <div className="space-y-4 p-4">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-foreground">事实详情</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {fact.content}
-              </p>
-            </div>
 
-            <Separator />
+        <div className="flex flex-col gap-4 py-4">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{companyLabels[fact.company] || fact.company}</Badge>
+            <Badge variant="secondary">{eventTypeLabels[fact.event_type] || fact.event_type}</Badge>
+            <Badge variant={fact.review_status === "confirmed" ? "default" : "secondary"}>
+              {reviewStatusLabels[fact.review_status] || fact.review_status}
+            </Badge>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">所属公司</span>
-                <Badge variant="outline">{companyLabels[fact.company]}</Badge>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">事件类型</span>
-                <Badge variant="outline">{eventTypeLabels[fact.eventType]}</Badge>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">复核状态</span>
-                <Badge variant="secondary">{factStatusLabels[fact.status]}</Badge>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">发布时间</span>
-                <span className="text-sm">{formatDate(fact.createdAt)}</span>
-              </div>
-              {fact.reviewedBy && (
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">复核人</span>
-                  <span className="text-sm">{fact.reviewedBy}</span>
-                </div>
-              )}
-              {fact.reviewedAt && (
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">复核时间</span>
-                  <span className="text-sm">{formatDate(fact.reviewedAt)}</span>
-                </div>
-              )}
-            </div>
+          <Separator />
 
-            <Separator />
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-foreground">标签</h3>
-              <div className="flex flex-wrap gap-2">
-                {fact.tags.map((tag) => (
-                  <Badge key={tag} variant="ghost">
-                    {tag}
-                  </Badge>
-                ))}
+          <div className="grid gap-3">
+            <div className="flex items-start gap-3">
+              <Globe className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">来源地址</p>
+                <a
+                  href={fact.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
+                >
+                  {fact.source_url}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             </div>
 
-            <Separator />
+            <div className="flex items-start gap-3">
+              <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">发布时间</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatDate(fact.published_at)}
+                </p>
+              </div>
+            </div>
 
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-foreground">原文对照</h3>
-              <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">来源标题:</span>
-                    <span className="text-sm font-medium">{fact.rawRecord.title}</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground leading-relaxed">
-                    {fact.rawRecord.content}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>发布时间: {formatDate(fact.rawRecord.publishedAt)}</span>
-                    <span>获取时间: {formatDate(fact.rawRecord.fetchedAt)}</span>
-                  </div>
-                </div>
+            <div className="flex items-start gap-3">
+              <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">创建时间</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatDate(fact.created_at)}
+                </p>
               </div>
             </div>
           </div>
-        </ScrollArea>
+
+          <Separator />
+
+          <div className="grid gap-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">主题一级</span>
+              <span className="text-sm font-medium">{fact.topic_level_1}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">主题二级</span>
+              <span className="text-sm font-medium">{fact.topic_level_2 || "-"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">实体类型</span>
+              <span className="text-sm font-medium">{fact.entity_type}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">实体名称</span>
+              <span className="text-sm font-medium">{fact.entity_name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">重要性</span>
+              <Badge variant="outline">{importanceLevelLabels[fact.importance_level] || fact.importance_level}</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">置信度</span>
+              <Badge variant="outline">{confidenceLevelLabels[fact.confidence] || fact.confidence}</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">能力等级</span>
+              <span className="text-sm font-medium">{fact.capability_level || "-"}</span>
+            </div>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

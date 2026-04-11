@@ -2,8 +2,13 @@ import argparse
 import asyncio
 import logging
 import sys
+import time
+from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi import FastAPI
+from pydantic import BaseModel
+import uvicorn
 
 from config import settings
 from tasks import CrawlTask
@@ -16,6 +21,28 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+WORKER_NAME = "crawler"
+_start_time = 0
+
+health_app = FastAPI(title="Crawler Health Check", docs_url=None, redoc_url=None)
+
+
+class HealthResponse(BaseModel):
+    status: str
+    worker: str
+    timestamp: str
+    uptime_seconds: float
+
+
+@health_app.get("/health", response_model=HealthResponse)
+async def health_check():
+    return HealthResponse(
+        status="healthy",
+        worker=WORKER_NAME,
+        timestamp=datetime.now().isoformat(),
+        uptime_seconds=round(time.time() - _start_time, 1),
+    )
 
 
 async def crawl_single_source(source_id: str):
@@ -44,6 +71,16 @@ async def crawl_all_sources():
 
 
 async def run_scheduler():
+    global _start_time
+    _start_time = time.time()
+    
+    health_task = asyncio.create_task(
+        uvicorn.Server(
+            uvicorn.Config(health_app, host="0.0.0.0", port=8080, log_level="warning", access_log=False)
+        ).serve()
+    )
+    logger.info("Health check server started on port 8080")
+    
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         crawl_all_sources,
@@ -61,6 +98,7 @@ async def run_scheduler():
     except (KeyboardInterrupt, SystemExit):
         logger.info("Shutting down scheduler...")
         scheduler.shutdown()
+        health_task.cancel()
 
 
 async def init_crawl4ai():
