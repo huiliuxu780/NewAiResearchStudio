@@ -9,6 +9,20 @@ export interface PushChannel {
   updated_at: string;
 }
 
+export interface PushChannelCreateData {
+  name: string;
+  channel_type: string;
+  config: Record<string, unknown>;
+  description?: string | null;
+}
+
+export interface PushChannelUpdateData {
+  name?: string;
+  is_enabled?: boolean;
+  config?: Record<string, unknown>;
+  description?: string | null;
+}
+
 export interface PushTask {
   id: string;
   name: string;
@@ -34,6 +48,38 @@ export interface PushTask {
   alert_channel_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PushTaskCreateData {
+  name: string;
+  description?: string | null;
+  trigger_type: string;
+  cron_expression?: string | null;
+  schedule_config?: Record<string, unknown> | null;
+  channel_ids: string[];
+  template_id?: string | null;
+  max_retries: number;
+  retry_interval: number;
+  event_type?: string | null;
+  event_filters?: Record<string, unknown> | null;
+  content_config: Record<string, unknown>;
+  alert_on_failure: boolean;
+  alert_channel_id?: string | null;
+}
+
+export interface PushTaskUpdateData {
+  name?: string;
+  description?: string | null;
+  cron_expression?: string | null;
+  schedule_config?: Record<string, unknown> | null;
+  channel_ids?: string[];
+  template_id?: string | null;
+  max_retries?: number;
+  retry_interval?: number;
+  event_filters?: Record<string, unknown> | null;
+  content_config?: Record<string, unknown> | null;
+  alert_on_failure?: boolean;
+  alert_channel_id?: string | null;
 }
 
 export interface PushRecord {
@@ -73,6 +119,29 @@ export interface PushTemplate {
   is_system: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface PushTemplateCreateData {
+  name: string;
+  description?: string | null;
+  channel_types: string[];
+  title_template: string;
+  content_template: string;
+  content_format: string;
+  variables: Record<string, unknown>;
+  default_values: Record<string, unknown>;
+}
+
+export interface PushTemplateUpdateData {
+  name?: string;
+  description?: string | null;
+  channel_types?: string[];
+  title_template?: string;
+  content_template?: string;
+  content_format?: string;
+  variables?: Record<string, unknown>;
+  default_values?: Record<string, unknown>;
+  is_enabled?: boolean;
 }
 
 export interface PushTemplatePreview {

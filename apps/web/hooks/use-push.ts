@@ -1,6 +1,12 @@
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import {
+  createPushTask,
+  createPushChannel,
+  createPushTemplate,
+  deletePushChannel,
+  deletePushTask,
+  deletePushTemplate,
   disablePushTask,
   enablePushTask,
   getPushChannel,
@@ -15,20 +21,28 @@ import {
   previewPushTemplate,
   retryPushRecord,
   triggerPushTask,
+  updatePushTask,
+  updatePushTemplate,
   updatePushChannel,
 } from '@/lib/api/push';
 import type {
   PreviewPushTemplateData,
   PushChannel,
+  PushChannelCreateData,
   PushChannelsFilter,
+  PushChannelUpdateData,
   PushRecord,
   PushRecordsFilter,
   PushStats,
   PushTask,
+  PushTaskCreateData,
   PushTasksFilter,
+  PushTaskUpdateData,
   PushTemplate,
+  PushTemplateCreateData,
   PushTemplatesFilter,
   PushTemplatePreview,
+  PushTemplateUpdateData,
   RetryPushRecordData,
   TriggerPushTaskData,
 } from '@/types/push';
@@ -47,12 +61,24 @@ export function usePushChannel(id: string | null) {
   return useSWR<PushChannel>(id ? `push-channel-${id}` : null, () => getPushChannel(id!));
 }
 
+export function useCreatePushChannel() {
+  return useSWRMutation(
+    'push-channel-create',
+    async (_key: string, { arg }: { arg: PushChannelCreateData }) => createPushChannel(arg)
+  );
+}
+
 export function useUpdatePushChannel() {
   return useSWRMutation(
     'push-channel-update',
-    async (_key: string, { arg }: { arg: { id: string; data: Partial<Pick<PushChannel, 'is_enabled'>> } }) => {
-      return updatePushChannel(arg.id, arg.data);
-    }
+    async (_key: string, { arg }: { arg: { id: string; data: PushChannelUpdateData } }) => updatePushChannel(arg.id, arg.data)
+  );
+}
+
+export function useDeletePushChannel() {
+  return useSWRMutation(
+    'push-channel-delete',
+    async (_key: string, { arg }: { arg: string }) => deletePushChannel(arg)
   );
 }
 
@@ -65,12 +91,33 @@ export function usePushTask(id: string | null) {
   return useSWR<PushTask>(id ? `push-task-${id}` : null, () => getPushTask(id!));
 }
 
+export function useCreatePushTask() {
+  return useSWRMutation(
+    'push-task-create',
+    async (_key: string, { arg }: { arg: PushTaskCreateData }) => createPushTask(arg)
+  );
+}
+
+export function useUpdatePushTask() {
+  return useSWRMutation(
+    'push-task-update',
+    async (_key: string, { arg }: { arg: { id: string; data: PushTaskUpdateData } }) => updatePushTask(arg.id, arg.data)
+  );
+}
+
 export function useEnablePushTask() {
   return useSWRMutation('push-task-enable', async (_key: string, { arg }: { arg: string }) => enablePushTask(arg));
 }
 
 export function useDisablePushTask() {
   return useSWRMutation('push-task-disable', async (_key: string, { arg }: { arg: string }) => disablePushTask(arg));
+}
+
+export function useDeletePushTask() {
+  return useSWRMutation(
+    'push-task-delete',
+    async (_key: string, { arg }: { arg: string }) => deletePushTask(arg)
+  );
 }
 
 export function useTriggerPushTask() {
@@ -103,6 +150,29 @@ export function usePushTemplates(filter?: PushTemplatesFilter) {
 
 export function usePushTemplate(id: string | null) {
   return useSWR<PushTemplate>(id ? `push-template-${id}` : null, () => getPushTemplate(id!));
+}
+
+export function useCreatePushTemplate() {
+  return useSWRMutation(
+    'push-template-create',
+    async (_key: string, { arg }: { arg: PushTemplateCreateData }) => createPushTemplate(arg)
+  );
+}
+
+export function useUpdatePushTemplate() {
+  return useSWRMutation(
+    'push-template-update',
+    async (_key: string, { arg }: { arg: { id: string; data: PushTemplateUpdateData } }) => {
+      return updatePushTemplate(arg.id, arg.data);
+    }
+  );
+}
+
+export function useDeletePushTemplate() {
+  return useSWRMutation(
+    'push-template-delete',
+    async (_key: string, { arg }: { arg: string }) => deletePushTemplate(arg)
+  );
 }
 
 export function usePreviewPushTemplate() {
