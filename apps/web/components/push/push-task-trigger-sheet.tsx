@@ -100,7 +100,11 @@ function PushTaskTriggerForm({
     <>
       <SheetHeader className="border-b px-6 py-5">
         <SheetTitle>调试触发任务</SheetTitle>
-        <SheetDescription>不改任务定义，直接带参数执行一轮推送，适合验证模板变量、渠道路由和落库结果。</SheetDescription>
+        <SheetDescription>
+          {task.trigger_type === "event_triggered"
+            ? "会走真实事件触发链路，而不是按 task id 强制执行，适合验证事件匹配、过滤条件和模板渲染。"
+            : "不改任务定义，直接带参数执行一轮推送，适合验证模板变量、渠道路由和落库结果。"}
+        </SheetDescription>
       </SheetHeader>
 
       <ScrollArea className="h-[calc(100vh-9rem)] px-6 py-5">
@@ -109,31 +113,34 @@ function PushTaskTriggerForm({
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{getTriggerTypeLabel(task.trigger_type)}</Badge>
               {linkedTemplate && <Badge variant="outline">模板: {linkedTemplate.name}</Badge>}
+              {task.event_type && <Badge variant="outline">事件: {task.event_type}</Badge>}
             </div>
             <p className="mt-3 text-base font-semibold text-foreground">{task.name}</p>
             <p className="mt-1 text-sm text-muted-foreground">{task.description || "当前任务暂无额外描述。"}</p>
           </div>
 
-          <div className="space-y-3">
-            <Label>覆盖发送渠道</Label>
-            <div className="flex flex-wrap gap-2">
-              {channels.map((channel) => {
-                const selected = channelIds.includes(channel.id);
-                return (
-                  <Button
-                    key={channel.id}
-                    type="button"
-                    variant={selected ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleChannel(channel.id)}
-                  >
-                    {channel.name}
-                  </Button>
-                );
-              })}
+          {task.trigger_type !== "event_triggered" && (
+            <div className="space-y-3">
+              <Label>覆盖发送渠道</Label>
+              <div className="flex flex-wrap gap-2">
+                {channels.map((channel) => {
+                  const selected = channelIds.includes(channel.id);
+                  return (
+                    <Button
+                      key={channel.id}
+                      type="button"
+                      variant={selected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleChannel(channel.id)}
+                    >
+                      {channel.name}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">默认会使用任务自身绑定的渠道；在这里可以临时改成本次调试用的路由。</p>
             </div>
-            <p className="text-xs text-muted-foreground">默认会使用任务自身绑定的渠道；在这里可以临时改成本次调试用的路由。</p>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="push-task-trigger-variables">
@@ -148,7 +155,7 @@ function PushTaskTriggerForm({
             />
             <p className="text-xs text-muted-foreground">
               {task.trigger_type === "event_triggered"
-                ? "事件触发任务会把这里的 JSON 当成 event payload 注入模板和执行逻辑。"
+                ? "事件触发任务会把这里的 JSON 当成 event payload 传给 /events/trigger，同事件下的其他任务也可能一起命中。"
                 : "这里的变量会覆盖模板默认值，用来验证不同消息场景。"}
             </p>
           </div>
@@ -162,7 +169,11 @@ function PushTaskTriggerForm({
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-300">
             <div className="flex items-start gap-2">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>执行后会自动跳到记录 tab，并按当前任务聚焦结果，方便我们立刻核对发送记录和失败原因。</p>
+              <p>
+                {task.trigger_type === "event_triggered"
+                  ? "执行后会自动跳到记录 tab；如果这次事件只命中当前任务，会自动聚焦到该任务，否则展示完整结果列表。"
+                  : "执行后会自动跳到记录 tab，并按当前任务聚焦结果，方便我们立刻核对发送记录和失败原因。"}
+              </p>
             </div>
           </div>
         </div>

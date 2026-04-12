@@ -8,11 +8,13 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { PaginatedResponse } from "@/lib/api";
-import type { PushRecord } from "@/types/push";
+import type { PushRecord, PushTask } from "@/types/push";
 
 export function PushRecordsTab({
   recordStatusFilter,
   recordChannelFilter,
+  taskOptions,
+  selectedTaskId,
   focusedTaskName,
   data,
   error,
@@ -20,6 +22,7 @@ export function PushRecordsTab({
   retryingRecordId,
   onRecordStatusChange,
   onRecordChannelChange,
+  onRecordTaskChange,
   onClearTaskFilter,
   onRecordPageChange,
   onRecordPageSizeChange,
@@ -28,6 +31,8 @@ export function PushRecordsTab({
 }: {
   recordStatusFilter: string;
   recordChannelFilter: string;
+  taskOptions: PushTask[];
+  selectedTaskId?: string | null;
   focusedTaskName?: string | null;
   data?: PaginatedResponse<PushRecord>;
   error?: Error;
@@ -35,6 +40,7 @@ export function PushRecordsTab({
   retryingRecordId: string | null;
   onRecordStatusChange: (value: string) => void;
   onRecordChannelChange: (value: string) => void;
+  onRecordTaskChange: (value: string) => void;
   onClearTaskFilter: () => void;
   onRecordPageChange: (page: number) => void;
   onRecordPageSizeChange: (size: number) => void;
@@ -80,6 +86,20 @@ export function PushRecordsTab({
               <SelectItem value="dingtalk">钉钉</SelectItem>
               <SelectItem value="wechat_work">企业微信</SelectItem>
               <SelectItem value="slack">Slack</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedTaskId ?? "all"} onValueChange={(value) => onRecordTaskChange(value ?? "all")}>
+            <SelectTrigger className="w-[180px] bg-background/70">
+              <SelectValue placeholder="关联任务" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部任务</SelectItem>
+              {taskOptions.map((task) => (
+                <SelectItem key={task.id} value={task.id}>
+                  {task.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

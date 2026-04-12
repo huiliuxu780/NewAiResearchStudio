@@ -40,6 +40,7 @@ import {
   useDeletePushChannel,
   useDeletePushTemplate,
   useRetryPushRecord,
+  useTriggerPushEvent,
   useTriggerPushTask,
   useUpdatePushTask,
   useUpdatePushTemplate,
@@ -61,6 +62,7 @@ import type {
   PushTemplatePreview,
   PushTemplateUpdateData,
   PushTemplatesFilter,
+  TriggerPushEventData,
   TriggerPushTaskData,
 } from "@/types/push";
 
@@ -96,6 +98,7 @@ export default function PushPage() {
   const [deletingChannel, setDeletingChannel] = useState<PushChannel | null>(null);
   const [selectedTask, setSelectedTask] = useState<PushTask | null>(null);
   const [editingTask, setEditingTask] = useState<PushTask | null>(null);
+  const [taskDraftSource, setTaskDraftSource] = useState<PushTask | null>(null);
   const [taskEditorOpen, setTaskEditorOpen] = useState(false);
   const [deletingTask, setDeletingTask] = useState<PushTask | null>(null);
   const [triggerTaskDraft, setTriggerTaskDraft] = useState<PushTask | null>(null);
@@ -103,6 +106,7 @@ export default function PushPage() {
   const [selectedRecord, setSelectedRecord] = useState<PushRecord | null>(null);
   const [detailTemplate, setDetailTemplate] = useState<PushTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<PushTemplate | null>(null);
+  const [templateDraftSource, setTemplateDraftSource] = useState<PushTemplate | null>(null);
   const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<PushTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<PushTemplate | null>(null);
@@ -164,6 +168,7 @@ export default function PushPage() {
   const records = usePushRecords(recordQuery);
   const templates = usePushTemplates(templateQuery);
   const taskEditorChannels = usePushChannels({ page: 1, page_size: 100 });
+  const recordFilterTasks = usePushTasks({ page: 1, page_size: 100 });
   const taskEditorTemplates = usePushTemplates({ page: 1, page_size: 100 });
 
   const updateChannelMutation = useUpdatePushChannel();
@@ -175,6 +180,7 @@ export default function PushPage() {
   const enableTaskMutation = useEnablePushTask();
   const disableTaskMutation = useDisablePushTask();
   const triggerTaskMutation = useTriggerPushTask();
+  const triggerEventMutation = useTriggerPushEvent();
   const retryRecordMutation = useRetryPushRecord();
   const previewTemplateMutation = usePreviewPushTemplate();
   const createTemplateMutation = useCreatePushTemplate();
@@ -360,6 +366,7 @@ export default function PushPage() {
       await refreshPushData();
       setTaskEditorOpen(false);
       setEditingTask(null);
+      setTaskDraftSource(null);
     } catch (error) {
       setFlashMessage({ tone: "error", text: getErrorMessage(error, "保存推送任务失败。") });
     }
@@ -388,6 +395,12 @@ export default function PushPage() {
     }
   }
 
+  function handleInspectTaskRecords(task: PushTask) {
+    setRecordTaskFocus({ id: task.id, name: task.name });
+    setRecordPage(1);
+    setActiveTab("records");
+  }
+
   async function handleTriggerTask(task: PushTask) {
     setTriggerTaskDraft(task);
     setTaskTriggerSheetOpen(true);
@@ -398,10 +411,28 @@ export default function PushPage() {
     setTriggeringTaskId(task.id);
 
     try {
-      const result = await triggerTaskMutation.trigger({ id: task.id, data });
+      const result =
+        task.trigger_type === "event_triggered" && task.event_type
+          ? await triggerEventMutation.trigger({
+              event_type: task.event_type,
+              event_data: data.template_variables ?? {},
+            } satisfies TriggerPushEventData)
+          : await triggerTaskMutation.trigger({ id: task.id, data });
+
+      const distinctTaskIds = [...new Set(result.map((record) => record.task_id))];
+      const nextFocus =
+        distinctTaskIds.length === 1
+          ? {
+              id: distinctTaskIds[0],
+              name:
+                distinctTaskIds[0] === task.id
+                  ? task.name
+                  : tasks.data?.items.find((item) => item.id === distinctTaskIds[0])?.name ?? task.name,
+            }
+          : null;
       const nextRecordQuery = {
         ...recordQuery,
-        task_id: task.id,
+        task_id: nextFocus?.id,
         page: 1,
       };
 
@@ -413,11 +444,14 @@ export default function PushPage() {
         mutate(["push-templates", templateQuery]),
       ]);
 
-      setRecordTaskFocus({ id: task.id, name: task.name });
+      setRecordTaskFocus(nextFocus);
       setRecordPage(1);
       setFlashMessage({
         tone: "success",
-        text: `任务「${task.name}」已手动触发，生成 ${result.length} 条推送记录。`,
+        text:
+          task.trigger_type === "event_triggered" && task.event_type
+            ? `事件「${task.event_type}」已触发，生成 ${result.length} 条推送记录。`
+            : `任务「${task.name}」已手动触发，生成 ${result.length} 条推送记录。`,
       });
       setTaskTriggerSheetOpen(false);
       setTriggerTaskDraft(null);
@@ -501,6 +535,7 @@ export default function PushPage() {
       await refreshPushData();
       setTemplateEditorOpen(false);
       setEditingTemplate(null);
+      setTemplateDraftSource(null);
     } catch (error) {
       setFlashMessage({ tone: "error", text: getErrorMessage(error, "保存推送模板失败。") });
     }
@@ -670,13 +705,21 @@ export default function PushPage() {
                 }}
                 onCreateTask={() => {
                   setEditingTask(null);
+                  setTaskDraftSource(null);
                   setTaskEditorOpen(true);
                 }}
                 onEditTask={(task) => {
+                  setTaskDraftSource(null);
                   setEditingTask(task);
                   setTaskEditorOpen(true);
                 }}
+                onDuplicateTask={(task) => {
+                  setEditingTask(null);
+                  setTaskDraftSource(task);
+                  setTaskEditorOpen(true);
+                }}
                 onDeleteTask={setDeletingTask}
+                onInspectTaskRecords={handleInspectTaskRecords}
                 onViewTask={setSelectedTask}
                 onToggleTask={(task) => void handleToggleTask(task)}
                 onTriggerTask={(task) => void handleTriggerTask(task)}
@@ -687,6 +730,8 @@ export default function PushPage() {
               <PushRecordsTab
                 recordStatusFilter={recordStatusFilter}
                 recordChannelFilter={recordChannelFilter}
+                taskOptions={recordFilterTasks.data?.items ?? []}
+                selectedTaskId={recordTaskFocus?.id ?? null}
                 focusedTaskName={recordTaskFocus?.name ?? null}
                 data={records.data}
                 error={records.error}
@@ -698,6 +743,14 @@ export default function PushPage() {
                 }}
                 onRecordChannelChange={(value) => {
                   setRecordChannelFilter(value);
+                  setRecordPage(1);
+                }}
+                onRecordTaskChange={(value) => {
+                  const nextTask =
+                    value === "all"
+                      ? null
+                      : (recordFilterTasks.data?.items ?? []).find((task) => task.id === value) ?? null;
+                  setRecordTaskFocus(nextTask ? { id: nextTask.id, name: nextTask.name } : null);
                   setRecordPage(1);
                 }}
                 onClearTaskFilter={() => {
@@ -736,11 +789,18 @@ export default function PushPage() {
                 }}
                 onCreateTemplate={() => {
                   setEditingTemplate(null);
+                  setTemplateDraftSource(null);
                   setTemplateEditorOpen(true);
                 }}
                 onSelectTemplate={handleSelectTemplate}
                 onEditTemplate={(template) => {
+                  setTemplateDraftSource(null);
                   setEditingTemplate(template);
+                  setTemplateEditorOpen(true);
+                }}
+                onDuplicateTemplate={(template) => {
+                  setEditingTemplate(null);
+                  setTemplateDraftSource(template);
                   setTemplateEditorOpen(true);
                 }}
                 onDeleteTemplate={setDeletingTemplate}
@@ -770,6 +830,7 @@ export default function PushPage() {
       />
       <PushTaskEditorSheet
         task={editingTask}
+        initialTask={taskDraftSource}
         channels={taskEditorChannels.data?.items ?? []}
         templates={taskEditorTemplates.data?.items ?? []}
         open={taskEditorOpen}
@@ -777,6 +838,7 @@ export default function PushPage() {
           setTaskEditorOpen(open);
           if (!open) {
             setEditingTask(null);
+            setTaskDraftSource(null);
           }
         }}
         onSave={(data) => void handleSaveTask(data)}
@@ -801,11 +863,13 @@ export default function PushPage() {
       <PushTemplateSheet template={detailTemplate} open={!!detailTemplate} onOpenChange={(open) => !open && setDetailTemplate(null)} />
       <PushTemplateEditorSheet
         template={editingTemplate}
+        initialTemplate={templateDraftSource}
         open={templateEditorOpen}
         onOpenChange={(open) => {
           setTemplateEditorOpen(open);
           if (!open) {
             setEditingTemplate(null);
+            setTemplateDraftSource(null);
           }
         }}
         onSave={(data) => void handleSaveTemplate(data)}

@@ -239,6 +239,11 @@ export interface TriggerPushTaskData {
   template_variables?: Record<string, unknown>;
 }
 
+export interface TriggerPushEventData {
+  event_type: string;
+  event_data: Record<string, unknown>;
+}
+
 export interface RetryPushRecordData {
   max_retries?: number;
 }

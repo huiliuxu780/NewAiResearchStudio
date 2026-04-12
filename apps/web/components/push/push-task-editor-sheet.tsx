@@ -27,6 +27,7 @@ const triggerOptions = [
 
 export function PushTaskEditorSheet({
   task,
+  initialTask,
   channels,
   templates,
   open,
@@ -35,6 +36,7 @@ export function PushTaskEditorSheet({
   isSaving = false,
 }: {
   task: PushTask | null;
+  initialTask?: PushTask | null;
   channels: PushChannel[];
   templates: PushTemplate[];
   open: boolean;
@@ -42,7 +44,7 @@ export function PushTaskEditorSheet({
   onSave: (data: PushTaskCreateData | PushTaskUpdateData) => void;
   isSaving?: boolean;
 }) {
-  const formKey = `${task?.id ?? "new"}-${open ? "open" : "closed"}`;
+  const formKey = `${task?.id ?? `copy-${initialTask?.id ?? "new"}`}-${open ? "open" : "closed"}`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -50,6 +52,7 @@ export function PushTaskEditorSheet({
         <PushTaskEditorForm
           key={formKey}
           task={task}
+          initialTask={initialTask}
           channels={channels}
           templates={templates}
           onOpenChange={onOpenChange}
@@ -63,6 +66,7 @@ export function PushTaskEditorSheet({
 
 function PushTaskEditorForm({
   task,
+  initialTask,
   channels,
   templates,
   onOpenChange,
@@ -70,6 +74,7 @@ function PushTaskEditorForm({
   isSaving,
 }: {
   task: PushTask | null;
+  initialTask?: PushTask | null;
   channels: PushChannel[];
   templates: PushTemplate[];
   onOpenChange: (open: boolean) => void;
@@ -77,20 +82,21 @@ function PushTaskEditorForm({
   isSaving: boolean;
 }) {
   const isEditing = Boolean(task);
-  const [name, setName] = useState(task?.name ?? "");
-  const [description, setDescription] = useState(task?.description ?? "");
-  const [triggerType, setTriggerType] = useState(task?.trigger_type ?? "scheduled");
-  const [cronExpression, setCronExpression] = useState(task?.cron_expression ?? "");
-  const [scheduleConfigText, setScheduleConfigText] = useState(JSON.stringify(task?.schedule_config ?? {}, null, 2));
-  const [channelIds, setChannelIds] = useState<string[]>(task?.channel_ids ?? []);
-  const [templateId, setTemplateId] = useState(task?.template_id ?? "__none__");
-  const [maxRetries, setMaxRetries] = useState(String(task?.max_retries ?? 3));
-  const [retryInterval, setRetryInterval] = useState(String(task?.retry_interval ?? 60));
-  const [eventType, setEventType] = useState(task?.event_type ?? "");
-  const [eventFiltersText, setEventFiltersText] = useState(JSON.stringify(task?.event_filters ?? {}, null, 2));
-  const [contentConfigText, setContentConfigText] = useState(JSON.stringify(task?.content_config ?? {}, null, 2));
-  const [alertOnFailure, setAlertOnFailure] = useState(task?.alert_on_failure ?? true);
-  const [alertChannelId, setAlertChannelId] = useState(task?.alert_channel_id ?? "__none__");
+  const sourceTask = task ?? initialTask ?? null;
+  const [name, setName] = useState(task?.name ?? (initialTask ? `${initialTask.name} - 副本` : ""));
+  const [description, setDescription] = useState(sourceTask?.description ?? "");
+  const [triggerType, setTriggerType] = useState(sourceTask?.trigger_type ?? "scheduled");
+  const [cronExpression, setCronExpression] = useState(sourceTask?.cron_expression ?? "");
+  const [scheduleConfigText, setScheduleConfigText] = useState(JSON.stringify(sourceTask?.schedule_config ?? {}, null, 2));
+  const [channelIds, setChannelIds] = useState<string[]>(sourceTask?.channel_ids ?? []);
+  const [templateId, setTemplateId] = useState(sourceTask?.template_id ?? "__none__");
+  const [maxRetries, setMaxRetries] = useState(String(sourceTask?.max_retries ?? 3));
+  const [retryInterval, setRetryInterval] = useState(String(sourceTask?.retry_interval ?? 60));
+  const [eventType, setEventType] = useState(sourceTask?.event_type ?? "");
+  const [eventFiltersText, setEventFiltersText] = useState(JSON.stringify(sourceTask?.event_filters ?? {}, null, 2));
+  const [contentConfigText, setContentConfigText] = useState(JSON.stringify(sourceTask?.content_config ?? {}, null, 2));
+  const [alertOnFailure, setAlertOnFailure] = useState(sourceTask?.alert_on_failure ?? true);
+  const [alertChannelId, setAlertChannelId] = useState(sourceTask?.alert_channel_id ?? "__none__");
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   const isFormValid = useMemo(() => {
@@ -169,9 +175,13 @@ function PushTaskEditorForm({
   return (
     <>
       <SheetHeader className="border-b px-6 py-5">
-        <SheetTitle>{isEditing ? "编辑推送任务" : "新建推送任务"}</SheetTitle>
+        <SheetTitle>{isEditing ? "编辑推送任务" : initialTask ? "复制推送任务" : "新建推送任务"}</SheetTitle>
         <SheetDescription>
-          {isEditing ? "调整任务执行配置、渠道路由和失败告警。" : "创建新的推送任务，绑定模板、触发方式和渠道。"}
+          {isEditing
+            ? "调整任务执行配置、渠道路由和失败告警。"
+            : initialTask
+              ? "基于现有任务快速生成一个副本，再按需微调。"
+              : "创建新的推送任务，绑定模板、触发方式和渠道。"}
         </SheetDescription>
       </SheetHeader>
 

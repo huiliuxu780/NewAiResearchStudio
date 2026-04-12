@@ -30,18 +30,20 @@ const formatOptions = [
 
 export function PushTemplateEditorSheet({
   template,
+  initialTemplate,
   open,
   onOpenChange,
   onSave,
   isSaving = false,
 }: {
   template: PushTemplate | null;
+  initialTemplate?: PushTemplate | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: PushTemplateCreateData | PushTemplateUpdateData) => void;
   isSaving?: boolean;
 }) {
-  const formKey = `${template?.id ?? "new"}-${open ? "open" : "closed"}`;
+  const formKey = `${template?.id ?? `copy-${initialTemplate?.id ?? "new"}`}-${open ? "open" : "closed"}`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -49,6 +51,7 @@ export function PushTemplateEditorSheet({
         <PushTemplateEditorForm
           key={formKey}
           template={template}
+          initialTemplate={initialTemplate}
           onOpenChange={onOpenChange}
           onSave={onSave}
           isSaving={isSaving}
@@ -60,25 +63,28 @@ export function PushTemplateEditorSheet({
 
 function PushTemplateEditorForm({
   template,
+  initialTemplate,
   onOpenChange,
   onSave,
   isSaving,
 }: {
   template: PushTemplate | null;
+  initialTemplate?: PushTemplate | null;
   onOpenChange: (open: boolean) => void;
   onSave: (data: PushTemplateCreateData | PushTemplateUpdateData) => void;
   isSaving: boolean;
 }) {
   const isEditing = Boolean(template);
-  const [name, setName] = useState(template?.name ?? "");
-  const [description, setDescription] = useState(template?.description ?? "");
-  const [channelTypes, setChannelTypes] = useState<string[]>(template?.channel_types ?? []);
-  const [contentFormat, setContentFormat] = useState(template?.content_format ?? "text");
-  const [titleTemplate, setTitleTemplate] = useState(template?.title_template ?? "");
-  const [contentTemplate, setContentTemplate] = useState(template?.content_template ?? "");
-  const [variablesText, setVariablesText] = useState(JSON.stringify(template?.variables ?? {}, null, 2));
-  const [defaultValuesText, setDefaultValuesText] = useState(JSON.stringify(template?.default_values ?? {}, null, 2));
-  const [isEnabled, setIsEnabled] = useState(template?.is_enabled ?? true);
+  const sourceTemplate = template ?? initialTemplate ?? null;
+  const [name, setName] = useState(template?.name ?? (initialTemplate ? `${initialTemplate.name} - 副本` : ""));
+  const [description, setDescription] = useState(sourceTemplate?.description ?? "");
+  const [channelTypes, setChannelTypes] = useState<string[]>(sourceTemplate?.channel_types ?? []);
+  const [contentFormat, setContentFormat] = useState(sourceTemplate?.content_format ?? "text");
+  const [titleTemplate, setTitleTemplate] = useState(sourceTemplate?.title_template ?? "");
+  const [contentTemplate, setContentTemplate] = useState(sourceTemplate?.content_template ?? "");
+  const [variablesText, setVariablesText] = useState(JSON.stringify(sourceTemplate?.variables ?? {}, null, 2));
+  const [defaultValuesText, setDefaultValuesText] = useState(JSON.stringify(sourceTemplate?.default_values ?? {}, null, 2));
+  const [isEnabled, setIsEnabled] = useState(sourceTemplate?.is_enabled ?? true);
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   const isFormValid = useMemo(() => {
@@ -119,9 +125,13 @@ function PushTemplateEditorForm({
   return (
     <>
       <SheetHeader className="border-b px-6 py-5">
-        <SheetTitle>{isEditing ? "编辑推送模板" : "新建推送模板"}</SheetTitle>
+        <SheetTitle>{isEditing ? "编辑推送模板" : initialTemplate ? "复制推送模板" : "新建推送模板"}</SheetTitle>
         <SheetDescription>
-          {isEditing ? "更新模板内容、变量定义和启用状态。" : "创建可供任务复用的推送模板。"}
+          {isEditing
+            ? "更新模板内容、变量定义和启用状态。"
+            : initialTemplate
+              ? "基于现有模板快速生成一个副本，再按场景改出新版本。"
+              : "创建可供任务复用的推送模板。"}
         </SheetDescription>
       </SheetHeader>
 

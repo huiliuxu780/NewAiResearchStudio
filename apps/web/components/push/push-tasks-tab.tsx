@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, Eye, Loader2, Play, Plus } from "lucide-react";
+import { BellRing, Eye, Loader2, Play, Plus, Send } from "lucide-react";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, getTriggerTypeLabel } from "@/components/push/push-shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,9 @@ export function PushTasksTab({
   onTaskPageSizeChange,
   onCreateTask,
   onEditTask,
+  onDuplicateTask,
   onDeleteTask,
+  onInspectTaskRecords,
   onViewTask,
   onToggleTask,
   onTriggerTask,
@@ -46,7 +48,9 @@ export function PushTasksTab({
   onTaskPageSizeChange: (size: number) => void;
   onCreateTask: () => void;
   onEditTask: (task: PushTask) => void;
+  onDuplicateTask: (task: PushTask) => void;
   onDeleteTask: (task: PushTask) => void;
+  onInspectTaskRecords: (task: PushTask) => void;
   onViewTask: (task: PushTask) => void;
   onToggleTask: (task: PushTask) => void;
   onTriggerTask: (task: PushTask) => void;
@@ -144,6 +148,13 @@ export function PushTasksTab({
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onEditTask(task)}>
                         编辑
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onDuplicateTask(task)}>
+                        复制
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onInspectTaskRecords(task)}>
+                        <Send className="h-3.5 w-3.5" />
+                        记录
                       </Button>
                       <Button size="sm" variant={task.is_enabled ? "outline" : "default"} disabled={updatingTaskId === task.id} onClick={() => onToggleTask(task)}>
                         {updatingTaskId === task.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}

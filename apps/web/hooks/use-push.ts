@@ -21,6 +21,7 @@ import {
   previewPushTemplate,
   retryPushRecord,
   triggerPushTask,
+  triggerPushEvent,
   updatePushTask,
   updatePushTemplate,
   updatePushChannel,
@@ -44,6 +45,7 @@ import type {
   PushTemplatePreview,
   PushTemplateUpdateData,
   RetryPushRecordData,
+  TriggerPushEventData,
   TriggerPushTaskData,
 } from '@/types/push';
 import type { PaginatedResponse } from '@/lib/api';
@@ -124,6 +126,13 @@ export function useTriggerPushTask() {
   return useSWRMutation(
     'push-task-trigger',
     async (_key: string, { arg }: { arg: { id: string; data?: TriggerPushTaskData } }) => triggerPushTask(arg.id, arg.data)
+  );
+}
+
+export function useTriggerPushEvent() {
+  return useSWRMutation(
+    'push-event-trigger',
+    async (_key: string, { arg }: { arg: TriggerPushEventData }) => triggerPushEvent(arg)
   );
 }
 
