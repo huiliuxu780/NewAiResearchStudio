@@ -10,7 +10,7 @@
 
 ## 技术栈
 
-- **前端**: Next.js 14 + TypeScript + Tailwind CSS + shadcn/ui
+- **前端**: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4 + shadcn/ui
 - **后端**: Python + FastAPI + Pydantic + SQLAlchemy
 - **采集**: Crawl4AI
 - **分析**: Qwen API
@@ -52,6 +52,21 @@ npm run dev
 - [数据契约](docs/data-contract.md)
 - [工程规则](docs/engineering-rules.md)
 - [Phase 1 计划](docs/phase-1-plan.md)
+- [当前状态](docs/current-state.md)
+- [运行手册](docs/runbook.md)
+- [接手清单](docs/takeover-checklist.md)
+- [统一 Backlog](docs/backlog-v1.md)
+- [需求池分诊](docs/requirements-triage.md)
+
+## 当前接手状态
+
+- 当前接手目标：稳定基线、校正文档、恢复可持续开发状态
+- 当前主要权威文档：
+  - `docs/current-state.md`
+  - `docs/runbook.md`
+  - `docs/takeover-checklist.md`
+  - `docs/backlog-v1.md`
+- 历史计划文档仍保留，但不应默认视为最新实现状态
 
 ## 研究对象
 

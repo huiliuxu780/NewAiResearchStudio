@@ -1,57 +1,29 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { navItems } from '@/types/labels';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { NavigationMenu } from '@/components/layout/navigation-menu';
 import {
-  LayoutDashboard,
-  Database,
-  FileText,
-  CheckCircle,
-  Lightbulb,
   Brain,
-  Package,
-  FolderOpen,
-  Calendar,
-  Settings,
   ChevronLeft,
   ChevronRight,
-  ScrollText,
-  MessageSquare,
-  Globe,
 } from 'lucide-react';
-import { useState } from 'react';
 
-const iconMap: Record<string, React.ReactNode> = {
-  'dashboard': <LayoutDashboard className="h-4 w-4" />,
-  'sources': <Database className="h-4 w-4" />,
-  'raw-records': <FileText className="h-4 w-4" />,
-  'facts': <CheckCircle className="h-4 w-4" />,
-  'insights': <Lightbulb className="h-4 w-4" />,
-  'prompts': <MessageSquare className="h-4 w-4" />,
-  'models': <Brain className="h-4 w-4" />,
-  'tasks': <Globe className="h-4 w-4" />,
-  'products': <Package className="h-4 w-4" />,
-  'topics': <FolderOpen className="h-4 w-4" />,
-  'reports': <Calendar className="h-4 w-4" />,
-  'logs': <ScrollText className="h-4 w-4" />,
-  'settings': <Settings className="h-4 w-4" />,
-};
+interface SidebarProps {
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+}
 
-export function Sidebar() {
-  const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
 
   const sidebarWidth = collapsed ? '64px' : '240px';
 
   return (
     <div
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r border-border bg-sidebar transition-all duration-300',
+        'fixed left-0 top-0 z-40 hidden h-screen border-r border-border bg-sidebar transition-all duration-300 md:flex',
         'flex flex-col'
       )}
       style={{ width: sidebarWidth }}
@@ -68,7 +40,7 @@ export function Sidebar() {
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={onToggleCollapse}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -77,30 +49,7 @@ export function Sidebar() {
       <Separator className="bg-border" />
 
       <ScrollArea className="flex-1 px-2 py-4">
-        <nav className="flex flex-col gap-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || 
-              (item.href !== '/' && pathname.startsWith(item.href));
-            
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                  'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                    : 'text-sidebar-foreground',
-                  collapsed && 'justify-center px-2'
-                )}
-              >
-                {iconMap[item.key]}
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
+        <NavigationMenu collapsed={collapsed} />
       </ScrollArea>
 
       <Separator className="bg-border" />
@@ -109,7 +58,7 @@ export function Sidebar() {
         {!collapsed && (
           <div className="text-xs text-sidebar-foreground/60">
             <p>版本 1.0.0</p>
-            <p>最后更新: 2026-04-10</p>
+            <p>最后更新: 2026-04-12</p>
           </div>
         )}
       </div>

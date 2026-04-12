@@ -1,6 +1,6 @@
 "use client";
 
-import { RawRecord, Source } from "@/types/entities";
+import { RawRecord } from "@/types/entities";
 import { companyLabels, crawlStatusLabels } from "@/types/labels";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";

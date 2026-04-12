@@ -1,7 +1,7 @@
 "use client";
 
 import { Fact } from "@/types/entities";
-import { companyLabels, eventTypeLabels, reviewStatusLabels } from "@/types/labels";
+import { companyLabels, eventTypeLabels } from "@/types/labels";
 
 interface FactListProps {
   facts: Fact[];

@@ -107,7 +107,7 @@ export default function SettingsPage() {
       {/* Settings Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={(value) => setActiveTab(value ?? "general")}
         className="w-full"
       >
         <TabsList className="w-full overflow-x-auto sm:w-fit">

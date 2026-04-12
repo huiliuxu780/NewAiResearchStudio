@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { useCompanySettings } from "@/hooks/use-settings";
-import { Building2, Mail, Phone, MapPin, Globe, Image } from "lucide-react";
+import { Building2, Mail, Phone, MapPin, Globe, Image as ImageIcon } from "lucide-react";
 
 interface CompanyFormData {
   company_name: string;
@@ -145,7 +145,7 @@ export function CompanySettings({ className }: React.HTMLAttributes<HTMLDivEleme
       {/* Company Logo */}
       <div className="space-y-2">
         <Label htmlFor="company_logo" className="flex items-center gap-2">
-          <Image className="h-4 w-4 text-muted-foreground" />
+          <ImageIcon className="h-4 w-4 text-muted-foreground" />
           公司 Logo URL
         </Label>
         <Input
@@ -157,13 +157,10 @@ export function CompanySettings({ className }: React.HTMLAttributes<HTMLDivEleme
         />
         {formData.company_logo && (
           <div className="mt-2 flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-            <img
-              src={formData.company_logo}
-              alt="Logo 预览"
-              className="h-10 w-10 rounded-md object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+            <div
+              aria-hidden="true"
+              className="h-10 w-10 rounded-md border border-border/50 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url("${formData.company_logo}")` }}
             />
             <span className="text-xs text-muted-foreground">Logo 预览</span>
           </div>

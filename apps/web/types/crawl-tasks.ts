@@ -20,6 +20,14 @@ export interface CrawlTaskStats {
   cancelled: number;
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface CrawlTasksFilter {
   status?: string;
   source_id?: string;

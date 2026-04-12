@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PromptTemplate } from "@/types/entities";
 import {
   Dialog,
@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Play, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -37,6 +36,7 @@ export function PromptTemplateTestDialog({
 }: PromptTemplateTestDialogProps) {
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (template) {
       const initialValues: Record<string, string> = {};
@@ -46,6 +46,7 @@ export function PromptTemplateTestDialog({
       setVariableValues(initialValues);
     }
   }, [template, open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleVariableChange = (variable: string, value: string) => {
     setVariableValues((prev) => ({ ...prev, [variable]: value }));

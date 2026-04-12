@@ -39,7 +39,7 @@ export function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label>公司</Label>
-            <Select value={company} onValueChange={setCompany}>
+            <Select value={company} onValueChange={(value) => setCompany(value ?? "")}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="选择公司" />
               </SelectTrigger>

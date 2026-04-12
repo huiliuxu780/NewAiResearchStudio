@@ -1,5 +1,3 @@
-import { Company, SourceType, EventType, ReviewStatus, CrawlStatus, DedupeStatus, ImportanceLevel, ConfidenceLevel, InsightType, ImpactLevel, Priority } from './enums';
-
 export const companyLabels: Record<string, string> = {
   alibaba: '阿里巴巴',
   byte_dance: '字节跳动',
@@ -122,18 +120,46 @@ export const timeRangeLabels: Record<string, string> = {
   'any': '不限时间',
 };
 
-export const navItems = [
-  { key: 'dashboard', label: 'Dashboard', href: '/' },
-  { key: 'sources', label: '信息源管理', href: '/sources' },
-  { key: 'raw-records', label: '原始记录', href: '/raw-records' },
-  { key: 'facts', label: '标准化事实', href: '/facts' },
-  { key: 'insights', label: '研究结论', href: '/insights' },
-  { key: 'prompts', label: '提示词管理', href: '/prompts' },
-  { key: 'models', label: '模型档案', href: '/models' },
-  { key: 'tasks', label: '抓取任务', href: '/tasks' },
-  { key: 'products', label: '产品档案', href: '/products' },
-  { key: 'topics', label: '研究主题', href: '/topics' },
-  { key: 'reports', label: '周报中心', href: '/reports' },
-  { key: 'logs', label: '系统日志', href: '/logs' },
-  { key: 'settings', label: '系统设置', href: '/settings' },
+export const navGroups = [
+  {
+    key: 'workspace',
+    label: '工作台',
+    items: [
+      { key: 'dashboard', label: 'Dashboard', href: '/' },
+      { key: 'reports', label: '周报中心', href: '/reports' },
+      { key: 'logs', label: '系统日志', href: '/logs' },
+    ],
+  },
+  {
+    key: 'intel-data',
+    label: '情报数据',
+    items: [
+      { key: 'sources', label: '信息源管理', href: '/sources' },
+      { key: 'tasks', label: '抓取任务', href: '/tasks' },
+      { key: 'raw-records', label: '原始记录', href: '/raw-records' },
+      { key: 'facts', label: '标准化事实', href: '/facts' },
+      { key: 'insights', label: '研究结论', href: '/insights' },
+    ],
+  },
+  {
+    key: 'knowledge-assets',
+    label: '知识资产',
+    items: [
+      { key: 'models', label: '模型档案', href: '/models' },
+      { key: 'products', label: '产品档案', href: '/products' },
+      { key: 'topics', label: '研究主题', href: '/topics' },
+      { key: 'prompts', label: '提示词管理', href: '/prompts' },
+    ],
+  },
+  {
+    key: 'configuration',
+    label: '配置中心',
+    items: [
+      { key: 'push', label: '推送管理', href: '/push' },
+      { key: 'settings', label: '系统设置', href: '/settings' },
+    ],
+  },
 ] as const;
+
+export type NavGroup = (typeof navGroups)[number];
+export type NavItem = NavGroup['items'][number];

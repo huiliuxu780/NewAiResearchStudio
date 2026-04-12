@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PromptTemplate } from "@/types/entities";
 import {
   Sheet,
@@ -62,6 +62,7 @@ export function PromptTemplateSheet({
   const [variables, setVariables] = useState<string[]>([]);
   const [newVariable, setNewVariable] = useState("");
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (template) {
       setName(template.name);
@@ -84,6 +85,7 @@ export function PromptTemplateSheet({
     }
     setNewVariable("");
   }, [template, open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleAddVariable = () => {
     const trimmed = newVariable.trim();
@@ -148,7 +150,7 @@ export function PromptTemplateSheet({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="prompt-category">分类</Label>
-                <Select value={category} onValueChange={setCategory}>
+                <Select value={category} onValueChange={(value) => setCategory(value ?? "")}>
                   <SelectTrigger id="prompt-category">
                     <SelectValue placeholder="选择分类" />
                   </SelectTrigger>
@@ -164,7 +166,7 @@ export function PromptTemplateSheet({
 
               <div className="space-y-2">
                 <Label htmlFor="prompt-task-type">任务类型</Label>
-                <Select value={taskType} onValueChange={setTaskType}>
+                <Select value={taskType} onValueChange={(value) => setTaskType(value ?? "")}>
                   <SelectTrigger id="prompt-task-type">
                     <SelectValue placeholder="选择任务类型" />
                   </SelectTrigger>

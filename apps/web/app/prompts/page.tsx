@@ -9,6 +9,11 @@ import { PromptTemplateCard } from "@/components/prompts/prompt-template-card";
 import { PromptTemplateSheet } from "@/components/prompts/prompt-template-sheet";
 import { PromptTemplateTestDialog } from "@/components/prompts/prompt-template-test-dialog";
 import {
+  CreatePromptTemplateData,
+  PromptTemplatesFilter,
+  UpdatePromptTemplateData,
+} from "@/lib/api/prompt-templates";
+import {
   usePromptTemplates,
   useCreatePromptTemplate,
   useUpdatePromptTemplate,
@@ -65,15 +70,15 @@ export default function PromptsPage() {
 
   const { mutate } = useSWRConfig();
 
-  const apiFilters = useMemo(() => {
-    const f: Record<string, string | boolean | undefined> = {};
+  const apiFilters = useMemo<PromptTemplatesFilter>(() => {
+    const f: PromptTemplatesFilter = {};
     if (filters.category && filters.category !== "all") f.category = filters.category;
     if (filters.task_type && filters.task_type !== "all") f.task_type = filters.task_type;
     if (filters.is_active && filters.is_active !== "all") f.is_active = filters.is_active === "true";
     return f;
   }, [filters]);
 
-  const { data: apiData, isLoading, error } = usePromptTemplates(apiFilters as any);
+  const { data: apiData, isLoading, error } = usePromptTemplates(apiFilters);
   const { trigger: triggerCreate, isMutating: isCreating } = useCreatePromptTemplate();
   const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdatePromptTemplate();
   const { trigger: triggerDelete, isMutating: isDeleting } = useDeletePromptTemplate();
@@ -127,19 +132,40 @@ export default function PromptsPage() {
   }, [deleteTarget, triggerDelete, mutate, apiFilters]);
 
   const handleSaveTemplate = useCallback(async (data: Partial<PromptTemplate>) => {
+    const basePayload = {
+      name: data.name ?? "",
+      category: data.category ?? "",
+      task_type: data.task_type ?? "",
+      template: data.template ?? "",
+      variables: data.variables ?? [],
+      is_active: data.is_active ?? true,
+      description: data.description ?? null,
+      notes: data.notes ?? null,
+    };
+
     if (isNewTemplate) {
-      await triggerCreate(data as any);
+      await triggerCreate(basePayload satisfies CreatePromptTemplateData);
     } else if (selectedTemplate) {
+      const updatePayload: UpdatePromptTemplateData = {
+        name: data.name,
+        category: data.category,
+        task_type: data.task_type,
+        template: data.template,
+        variables: data.variables,
+        is_active: data.is_active,
+        description: data.description ?? null,
+        notes: data.notes ?? null,
+      };
       await triggerUpdate({
         id: selectedTemplate.id,
-        data: data as any,
+        data: updatePayload,
       });
     }
     mutate(["prompt-templates", apiFilters]);
     setSheetOpen(false);
   }, [isNewTemplate, selectedTemplate, triggerCreate, triggerUpdate, mutate, apiFilters]);
 
-  const handleRunTest = useCallback(async (id: string, _variables: Record<string, string>) => {
+  const handleRunTest = useCallback(async (id: string) => {
     const result = await triggerTest(id);
     setTestResult(result);
   }, [triggerTest]);
@@ -185,7 +211,7 @@ export default function PromptsPage() {
       ) : templates.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p className="text-lg mb-2">暂无提示词模板</p>
-          <p className="text-sm">点击"新建提示词"创建第一个提示词模板</p>
+          <p className="text-sm">点击“新建提示词”创建第一个提示词模板</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

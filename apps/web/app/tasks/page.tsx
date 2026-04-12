@@ -91,12 +91,12 @@ export default function TasksPage() {
   const createMutation = useCreateCrawlTask();
   const cancelMutation = useCancelCrawlTask();
 
-  const tasks = useMemo(() => {
-    return apiData?.items || [];
+  const tasks = useMemo<CrawlTask[]>(() => {
+    return apiData?.items ?? [];
   }, [apiData]);
 
   const sources = useMemo(() => {
-    return sourcesData?.items || [];
+    return sourcesData?.items ?? [];
   }, [sourcesData]);
 
   const handleFilterChange = (key: string, value: string) => {

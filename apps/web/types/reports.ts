@@ -16,13 +16,21 @@ export interface ReportSection {
   title: string;
   type: string;
   content: string;
-  stats?: Record<string, any>;
+  stats?: Record<string, unknown>;
 }
 
 export interface GenerateReportData {
   company: string;
   start_date: string;
   end_date: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 export interface ReportsFilter {

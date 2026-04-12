@@ -19,7 +19,6 @@ import { companyLabels } from "@/types/labels";
 import {
   Activity,
   Database,
-  FileText,
   CheckCircle,
   Lightbulb,
 } from "lucide-react";

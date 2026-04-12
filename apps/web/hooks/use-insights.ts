@@ -6,18 +6,17 @@ import { useDataSource } from './use-data-source';
 export function useInsights(filter?: InsightsFilter) {
   const { isMock } = useDataSource();
   const key = ['insights', filter];
-
-  if (isMock) {
-    return useSWR<PaginatedResponse<Insight>>(key, () => ({
+  const fetcher = isMock
+    ? async () => ({
       items: [],
       total: 0,
       page: 1,
       page_size: 20,
       total_pages: 0,
-    }));
-  }
+    })
+    : async () => getInsights(filter);
 
-  return useSWR<PaginatedResponse<Insight>>(key, () => getInsights(filter));
+  return useSWR<PaginatedResponse<Insight>>(key, fetcher);
 }
 
 export function useInsight(id: string | null) {

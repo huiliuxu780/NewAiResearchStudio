@@ -83,19 +83,21 @@ export function PromptTemplateCard({
           </div>
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant={template.is_active ? "default" : "secondary"}
-                  className={cn(
-                    "shrink-0",
-                    template.is_active
-                      ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {template.is_active ? "已启用" : "已停用"}
-                </Badge>
-              </TooltipTrigger>
+              <TooltipTrigger
+                render={
+                  <Badge
+                    variant={template.is_active ? "default" : "secondary"}
+                    className={cn(
+                      "shrink-0",
+                      template.is_active
+                        ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {template.is_active ? "已启用" : "已停用"}
+                  </Badge>
+                }
+              />
               <TooltipContent>
                 <p>{template.is_active ? "当前已启用" : "当前已停用"}</p>
               </TooltipContent>
@@ -152,15 +154,17 @@ export function PromptTemplateCard({
           <div className="flex items-center gap-1">
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => onTest(template)}
-                  >
-                    <Play className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onTest(template)}
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                  }
+                />
                 <TooltipContent>
                   <p>测试提示词</p>
                 </TooltipContent>
@@ -169,15 +173,17 @@ export function PromptTemplateCard({
 
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => onEdit(template)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onEdit(template)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  }
+                />
                 <TooltipContent>
                   <p>编辑提示词</p>
                 </TooltipContent>
@@ -185,11 +191,13 @@ export function PromptTemplateCard({
             </TooltipProvider>
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="icon-sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onToggleActive(template)}>
                   {template.is_active ? (

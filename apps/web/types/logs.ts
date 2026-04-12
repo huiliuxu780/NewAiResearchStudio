@@ -4,8 +4,8 @@ export interface OperationLog {
   action: string;
   entity_type: string;
   entity_id: string;
-  old_value: Record<string, any> | null;
-  new_value: Record<string, any> | null;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
   ip_address: string | null;
   user_agent: string | null;
   status: string;

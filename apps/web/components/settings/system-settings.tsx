@@ -8,7 +8,6 @@ import { Switch } from "@/components/ui/switch";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { useSystemSettings } from "@/hooks/use-settings";
 import {
-  Settings2,
   ListOrdered,
   Layers,
   Cpu,

@@ -72,8 +72,8 @@ function getCrawlConfigSummary(source: Source): string {
     case "search_keyword": {
       const config = source.crawl_config || {};
       const parts: string[] = [];
-      if (config.keywords) {
-        const keywords = config.keywords.split(",").slice(0, 2);
+      if (config.keywords && config.keywords.length > 0) {
+        const keywords = config.keywords.slice(0, 2);
         parts.push(keywords.join(", "));
       }
       if (config.search_engine) parts.push(config.search_engine);

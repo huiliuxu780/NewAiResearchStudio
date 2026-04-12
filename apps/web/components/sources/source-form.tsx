@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Source } from "@/types/entities";
-import { companyLabels, sourceTypeLabels, crawlStrategyLabels, socialPlatformLabels, searchEngineLabels } from "@/types/labels";
+import { useEffect, useState } from "react";
+import { CrawlConfig, Source } from "@/types/entities";
+import { companyLabels, sourceTypeLabels, socialPlatformLabels, searchEngineLabels } from "@/types/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { FileText, Layers, Search, AtSign, X, Plus, Info, Link2, Hash } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AtSign, FileText, Hash, Info, Layers, Link2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SourceFormData {
@@ -32,7 +32,7 @@ export interface SourceFormData {
   enabled: boolean;
   // 采集策略相关字段
   crawl_strategy: string;
-  crawl_config: Record<string, any>;
+  crawl_config: CrawlConfig;
   social_platform: string;
   social_account_id: string;
 }
@@ -193,6 +193,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
   const [formData, setFormData] = useState<SourceFormData>(defaultFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -215,6 +216,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
     }
     setErrors({});
   }, [initialData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -257,7 +259,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
 
     if (formData.crawl_strategy === "search_keyword") {
       const keywords = formData.crawl_config?.keywords;
-      if (!keywords || (Array.isArray(keywords) ? keywords.length === 0 : !keywords.trim())) {
+      if (!keywords || keywords.length === 0) {
         newErrors["crawl_config.keywords"] = "请输入至少一个搜索关键词";
       }
       if (!formData.crawl_config?.search_engine) {
@@ -296,7 +298,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
     }
   };
 
-  const updateCrawlConfig = (key: string, value: string | number) => {
+  const updateCrawlConfig = (key: keyof CrawlConfig, value: CrawlConfig[keyof CrawlConfig]) => {
     setFormData((prev) => ({
       ...prev,
       crawl_config: { ...prev.crawl_config, [key]: value },
@@ -312,8 +314,8 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
   };
 
   // 当切换采集策略时，清空相关配置
-  const handleCrawlStrategyChange = (value: string) => {
-    updateField("crawl_strategy", value);
+  const handleCrawlStrategyChange = (value: string | null) => {
+    updateField("crawl_strategy", value ?? "single_page");
     setFormData((prev) => ({
       ...prev,
       crawl_config: {},
@@ -510,7 +512,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
                   <Label htmlFor="search_engine">搜索引擎 *</Label>
                   <Select
                     value={formData.crawl_config?.search_engine || ""}
-                    onValueChange={(value) => updateCrawlConfig("search_engine", value)}
+                    onValueChange={(value) => updateCrawlConfig("search_engine", value ?? "")}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="请选择搜索引擎" />
@@ -553,7 +555,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
                   <Label htmlFor="language">语言筛选</Label>
                   <Select
                     value={formData.crawl_config?.language || ""}
-                    onValueChange={(value) => updateCrawlConfig("language", value)}
+                    onValueChange={(value) => updateCrawlConfig("language", value ?? "")}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="不限语言" />
@@ -572,7 +574,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
                   <Label htmlFor="time_range">时间范围</Label>
                   <Select
                     value={formData.crawl_config?.time_range || ""}
-                    onValueChange={(value) => updateCrawlConfig("time_range", value)}
+                    onValueChange={(value) => updateCrawlConfig("time_range", value ?? "")}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="不限时间" />
@@ -637,7 +639,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
                 <Label htmlFor="social_platform">社交平台 *</Label>
                 <Select
                   value={formData.social_platform}
-                  onValueChange={(value) => updateField("social_platform", value)}
+                  onValueChange={(value) => updateField("social_platform", value ?? "")}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="请选择社交平台" />
@@ -765,7 +767,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
         <Label htmlFor="company">所属公司 *</Label>
         <Select
           value={formData.company}
-          onValueChange={(value) => updateField("company", value)}
+          onValueChange={(value) => updateField("company", value ?? "")}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="请选择所属公司" />
@@ -785,7 +787,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
         <Label htmlFor="source_type">来源类型 *</Label>
         <Select
           value={formData.source_type}
-          onValueChange={(value) => updateField("source_type", value)}
+          onValueChange={(value) => updateField("source_type", value ?? "")}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="请选择来源类型" />
@@ -859,7 +861,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
         <Label htmlFor="parser_type">解析器类型</Label>
         <Select
           value={formData.parser_type}
-          onValueChange={(value) => updateField("parser_type", value)}
+          onValueChange={(value) => updateField("parser_type", value ?? "")}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="请选择解析器类型" />
@@ -878,7 +880,7 @@ export function SourceForm({ initialData, onSubmit, onCancel, loading }: SourceF
         <Label htmlFor="priority">优先级</Label>
         <Select
           value={formData.priority}
-          onValueChange={(value) => updateField("priority", value)}
+          onValueChange={(value) => updateField("priority", value ?? "")}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="请选择优先级" />

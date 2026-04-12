@@ -2,6 +2,8 @@
 
 ## 1. Phase 3 目标
 
+> 2026-04-12 校准说明：本文件是 Phase 3 规划文档，不再完整代表当前实现状态。当前已实现进度与运行现状请同时参考 `docs/current-state.md` 和 `docs/worklog.md`。
+
 ### 1.1 总体目标
 
 接入 Qwen API，实现 AI 驱动的事实抽取和结论生成。
@@ -128,11 +130,11 @@ workers/insight_generator/
 | 序号 | 任务 | 分支名 | 优先级 | 状态 |
 |------|------|--------|--------|------|
 | 1 | Phase 3 规划文档 | docs/phase3-plan | P0 | ✅ |
-| 2 | 创建事实抽取 Worker | feat/fact-extractor | P0 | 待开始 |
-| 3 | 创建结论生成 Worker | feat/insight-generator | P0 | 待开始 |
-| 4 | Prompt 模板管理 | feat/prompt-templates | P1 | 待开始 |
-| 5 | 人工复核工作台完善 | feat/review-workflow | P1 | 待开始 |
-| 6 | 日报/周报生成 | feat/report-generator | P2 | 待开始 |
+| 2 | 创建事实抽取 Worker | feat/fact-extractor | P0 | 已实现，待基线验证 |
+| 3 | 创建结论生成 Worker | feat/insight-generator | P0 | 已实现，待基线验证 |
+| 4 | Prompt 模板管理 | feat/prompt-templates | P1 | 已部分实现，待收口 |
+| 5 | 人工复核工作台完善 | feat/review-workflow | P1 | 待收口 |
+| 6 | 日报/周报生成 | feat/report-generator | P2 | 已部分实现，待收口 |
 
 ---
 
@@ -140,9 +142,9 @@ workers/insight_generator/
 
 ### 5.1 功能验收
 
-- [ ] 事实抽取 Worker 可正常运行
-- [ ] 结论生成 Worker 可正常运行
-- [ ] Qwen API 调用成功
+- [ ] 事实抽取 Worker 基线验证通过
+- [ ] 结论生成 Worker 基线验证通过
+- [ ] Qwen API 调用在有效密钥环境下验证成功
 - [ ] 抽取结果保存到数据库
 - [ ] 结论保存到数据库
 

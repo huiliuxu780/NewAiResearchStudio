@@ -7,18 +7,17 @@ import { useDataSource } from './use-data-source';
 export function useSources(filter?: SourcesFilter) {
   const { isMock } = useDataSource();
   const key = ['sources', filter];
-
-  if (isMock) {
-    return useSWR<PaginatedResponse<Source>>(key, () => ({
+  const fetcher = isMock
+    ? async () => ({
       items: [],
       total: 0,
       page: 1,
       page_size: 20,
       total_pages: 0,
-    }));
-  }
+    })
+    : async () => getSources(filter);
 
-  return useSWR<PaginatedResponse<Source>>(key, () => getSources(filter));
+  return useSWR<PaginatedResponse<Source>>(key, fetcher);
 }
 
 export function useSource(id: string | null) {

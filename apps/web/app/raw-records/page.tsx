@@ -5,7 +5,7 @@ import { RawRecord } from "@/types/entities";
 import { RecordTable } from "@/components/raw-records/record-table";
 import { RecordFilter } from "@/components/raw-records/record-filter";
 import { RecordPreviewSheet } from "@/components/raw-records/record-preview-sheet";
-import { useRawRecords, useSources } from "@/hooks";
+import { useRawRecords } from "@/hooks";
 
 export default function RawRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<RawRecord | null>(null);
@@ -14,7 +14,6 @@ export default function RawRecordsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const { data: sourcesData } = useSources();
   const { data: apiData, isLoading, error } = useRawRecords({
     company: filters.company && filters.company !== "all" ? filters.company : undefined,
     crawl_status: filters.crawl_status && filters.crawl_status !== "all" ? filters.crawl_status : undefined,
@@ -26,10 +25,6 @@ export default function RawRecordsPage() {
   const filteredRecords = useMemo(() => {
     return apiData?.items || [];
   }, [apiData]);
-
-  const sources = useMemo(() => {
-    return sourcesData?.items || [];
-  }, [sourcesData]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));

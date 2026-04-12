@@ -7,18 +7,17 @@ import { useDataSource } from './use-data-source';
 export function useFacts(filter?: FactsFilter) {
   const { isMock } = useDataSource();
   const key = ['facts', filter];
-
-  if (isMock) {
-    return useSWR<PaginatedResponse<Fact>>(key, () => ({
+  const fetcher = isMock
+    ? async () => ({
       items: [],
       total: 0,
       page: 1,
       page_size: 20,
       total_pages: 0,
-    }));
-  }
+    })
+    : async () => getFacts(filter);
 
-  return useSWR<PaginatedResponse<Fact>>(key, () => getFacts(filter));
+  return useSWR<PaginatedResponse<Fact>>(key, fetcher);
 }
 
 export function useFact(id: string | null) {

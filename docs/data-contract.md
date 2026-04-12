@@ -1,5 +1,7 @@
 # AI 研究平台 - 数据契约
 
+> 2026-04-12 BG-003 校准说明：本文档最初按 Phase 1 设计稿编写，当前已按真实后端 schema / router 做第一轮校准。若历史字段定义与 `apps/api/schemas/`、`apps/api/routers/` 冲突，以后端实现为准。
+
 ## 1. 核心实体模型
 
 ### 1.1 实体关系图
@@ -34,7 +36,7 @@ WeeklyReport (周报)
 | 枚举值 | 英文标识 | 中文名称 | 说明 |
 |--------|----------|----------|------|
 | 阿里 | alibaba | 阿里巴巴 | 含阿里云、通义千问等 |
-| 字节 | bytedance | 字节跳动 | 含火山引擎、豆包等 |
+| 字节 | byte_dance | 字节跳动 | 含火山引擎、豆包等 |
 | 腾讯 | tencent | 腾讯 | 含腾讯云、混元等 |
 
 ### 2.2 来源类型 (SourceType)
@@ -50,14 +52,14 @@ WeeklyReport (周报)
 | 应用页面 | app_page | 应用商店页面 |
 | 开放平台 | open_platform | 开放平台文档 |
 
-### 2.3 采集类型 (CrawlType)
+### 2.3 采集策略 (CrawlStrategy)
 
 | 枚举值 | 英文标识 | 说明 |
 |--------|----------|------|
-| 模型情报 | model_intel | AI 模型相关信息 |
-| 产品情报 | product_intel | 产品相关信息 |
-| 新闻情报 | news_intel | 新闻媒体报道 |
-| 战略情报 | strategy_intel | 战略动态信息 |
+| 单页采集 | single_page | 只抓取当前页面 |
+| 多页遍历 | multi_page | 递归抓取子页面 |
+| 关键词搜索 | search_keyword | 通过搜索结果抓取 |
+| 官方号观测 | social_media | 观测社交媒体/官方账号 |
 
 ### 2.4 事件类型 (EventType)
 
@@ -133,8 +135,8 @@ WeeklyReport (周报)
 |--------|----------|------|
 | 待复核 | pending | 等待人工复核 |
 | 已确认 | confirmed | 已确认无误 |
-| 已修改 | modified | 已修改内容 |
 | 已驳回 | rejected | 已驳回 |
+| 已产出结论 | insight_generated | 已生成结论并进入下游流程 |
 
 ### 2.11 采集状态 (CrawlStatus)
 
@@ -154,6 +156,23 @@ WeeklyReport (周报)
 | 重复 | duplicate | 重复记录 |
 | 待处理 | pending | 待去重处理 |
 
+### 2.13 优先级 (Priority)
+
+| 枚举值 | 英文标识 | 说明 |
+|--------|----------|------|
+| 高 | high | 高优先级 |
+| 中 | medium | 默认优先级 |
+| 低 | low | 低优先级 |
+
+### 2.14 社交平台 (SocialPlatform)
+
+| 枚举值 | 英文标识 | 说明 |
+|--------|----------|------|
+| X / Twitter | twitter | 海外社交平台 |
+| 微博 | weibo | 微博官方号 |
+| 微信 | wechat | 微信公众号/视频号等 |
+| 其他 | other | 其他平台 |
+
 ---
 
 ## 3. 实体字段定义
@@ -170,8 +189,12 @@ WeeklyReport (周报)
 | enabled | enabled | boolean | 是 | 是否启用 | 状态 |
 | schedule | schedule | string | 否 | 采集频率 cron | 采集频率 |
 | parser_type | parser_type | string | 否 | 解析器类型 | 解析器 |
-| priority | priority | enum | 是 | 优先级 | 优先级 |
+| priority | priority | enum | 是 | 优先级（`high/medium/low`） | 优先级 |
 | notes | notes | string | 否 | 备注 | 备注 |
+| crawl_strategy | crawl_strategy | enum | 是 | 采集策略 | 采集策略 |
+| crawl_config | crawl_config | json | 否 | 采集策略附加配置 | 采集配置 |
+| social_platform | social_platform | enum | 否 | 社交平台类型 | 社交平台 |
+| social_account_id | social_account_id | string | 否 | 官方号 / 账号标识 | 官方号标识 |
 | created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
 | updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
 
@@ -207,7 +230,7 @@ WeeklyReport (周报)
 | event_type | event_type | enum | 是 | 事件类型 | 事件类型 |
 | entity_type | entity_type | enum | 是 | 实体类型 | 实体类型 |
 | entity_name | entity_name | string | 是 | 实体名称 | 实体名称 |
-| importance_level | importance_level | enum | 是 | 重要性层级 | 重要性 |
+| importance_level | importance_level | enum | 是 | 重要性层级（`high/medium/low`） | 重要性 |
 | capability_level | capability_level | enum | 否 | 能力层级 | 能力层级 |
 | confidence | confidence | enum | 是 | 置信度 | 置信度 |
 | published_at | published_at | datetime | 否 | 发布时间 | 发布时间 |
@@ -285,15 +308,296 @@ WeeklyReport (周报)
 | 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
 |--------|----------|------|------|------|------------|
 | id | id | string | 是 | 主键 UUID | ID |
-| report_name | report_name | string | 是 | 报告名称 | 报告名称 |
-| report_type | report_type | enum | 是 | 报告类型 | 报告类型 |
-| generated_at | generated_at | datetime | 是 | 生成时间 | 生成时间 |
-| status | status | enum | 是 | 报告状态 | 状态 |
-| content | content | text | 是 | 报告内容 | 报告内容 |
-| facts_count | facts_count | integer | 否 | 关联事实数 | 关联事实数 |
-| insights_count | insights_count | integer | 否 | 关联结论数 | 关联结论数 |
+| title | title | string | 是 | 报告标题 | 报告标题 |
+| company | company | string | 是 | 所属公司 | 所属公司 |
+| start_date | start_date | date | 是 | 统计开始日期 | 开始日期 |
+| end_date | end_date | date | 是 | 统计结束日期 | 结束日期 |
+| content | content | json | 是 | 结构化报告内容 | 报告内容 |
+| status | status | string | 是 | 报告状态 | 状态 |
 | created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
 | updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+### 3.9 AIModel（AI 模型配置）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| name | name | string | 是 | 模型配置名称 | 模型名称 |
+| provider | provider | string | 是 | 模型提供方，如 `qwen`、`openai` | 提供方 |
+| model_name | model_name | string | 是 | 真实模型标识 | 模型标识 |
+| api_base_url | api_base_url | string | 否 | 自定义 API Base URL | API 地址 |
+| temperature | temperature | float | 是 | 温度参数 | 温度 |
+| max_tokens | max_tokens | integer | 是 | 最大输出 token 数 | 最大 Token |
+| enabled | enabled | boolean | 是 | 是否启用 | 启用状态 |
+| is_default | is_default | boolean | 是 | 是否默认模型 | 默认模型 |
+| task_types | task_types | array[string] | 是 | 适用任务类型列表 | 任务类型 |
+| notes | notes | string | 否 | 备注 | 备注 |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+说明：
+
+- `AIModelResponse` 不返回 `api_key`
+- `AIModelCreate` / `AIModelUpdate` 请求体中包含 `api_key`
+
+### 3.10 PromptTemplate（Prompt 模板）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| name | name | string | 是 | 模板名称 | 模板名称 |
+| category | category | string | 是 | 模板分类 | 分类 |
+| task_type | task_type | string | 是 | 关联任务类型 | 任务类型 |
+| template | template | text | 是 | Prompt 模板正文 | 模板内容 |
+| variables | variables | array[string] | 是 | 模板变量名列表 | 变量列表 |
+| version | version | integer | 是 | 模板版本号 | 版本 |
+| is_active | is_active | boolean | 是 | 是否启用 | 启用状态 |
+| description | description | string | 否 | 模板描述 | 描述 |
+| notes | notes | string | 否 | 备注 | 备注 |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+### 3.11 CrawlTask（采集任务）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| source_id | source_id | string | 是 | 关联信息源 ID | 信息源 ID |
+| task_type | task_type | string | 是 | 任务触发类型，如 `manual` | 任务类型 |
+| status | status | enum | 是 | 任务状态（`pending/running/completed/failed/cancelled`） | 任务状态 |
+| started_at | started_at | datetime | 否 | 开始时间 | 开始时间 |
+| completed_at | completed_at | datetime | 否 | 结束时间 | 结束时间 |
+| records_count | records_count | integer | 是 | 本次采集记录数 | 记录数 |
+| error_message | error_message | string | 否 | 错误信息 | 错误信息 |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+补充统计模型 `CrawlTaskStats`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| total | total | integer | 是 | 总任务数 | 总数 |
+| pending | pending | integer | 是 | 待执行任务数 | 待执行 |
+| running | running | integer | 是 | 执行中任务数 | 执行中 |
+| completed | completed | integer | 是 | 已完成任务数 | 已完成 |
+| failed | failed | integer | 是 | 失败任务数 | 失败 |
+| cancelled | cancelled | integer | 是 | 已取消任务数 | 已取消 |
+| total_records | total_records | integer | 是 | 累计采集记录数 | 累计记录 |
+
+### 3.12 OperationLog（操作日志）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| user_id | user_id | string | 是 | 操作用户标识，默认 `admin` | 用户 ID |
+| action | action | string | 是 | 操作动作 | 操作动作 |
+| entity_type | entity_type | string | 是 | 实体类型 | 实体类型 |
+| entity_id | entity_id | string | 是 | 实体 ID | 实体 ID |
+| old_value | old_value | json | 否 | 变更前值 | 旧值 |
+| new_value | new_value | json | 否 | 变更后值 | 新值 |
+| ip_address | ip_address | string | 否 | 来源 IP | IP 地址 |
+| user_agent | user_agent | string | 否 | 客户端 User-Agent | User Agent |
+| status | status | string | 是 | 操作结果状态，默认 `success` | 状态 |
+| error_message | error_message | string | 否 | 错误信息 | 错误信息 |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+
+### 3.13 AILog（AI 调用日志）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| task_type | task_type | string | 是 | AI 调用任务类型 | 任务类型 |
+| model_name | model_name | string | 是 | 使用的模型名 | 模型名称 |
+| input_prompt | input_prompt | text | 否 | 输入 Prompt | 输入 Prompt |
+| output_result | output_result | text | 否 | 输出结果 | 输出结果 |
+| input_tokens | input_tokens | integer | 是 | 输入 token 数 | 输入 Token |
+| output_tokens | output_tokens | integer | 是 | 输出 token 数 | 输出 Token |
+| cost_ms | cost_ms | integer | 是 | 调用耗时（毫秒） | 耗时 |
+| status | status | string | 是 | 调用状态，默认 `success` | 状态 |
+| error_message | error_message | string | 否 | 失败原因 | 错误信息 |
+| source_entity_id | source_entity_id | string | 否 | 关联源实体 ID | 源实体 ID |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+
+### 3.14 SystemSettings（系统设置）
+
+`SystemSettingsResponse` 当前是扁平键值结构：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| key | key | string | 是 | 设置键名 | 键名 |
+| value | value | string | 是 | 设置值 | 设置值 |
+| category | category | string | 是 | 设置分类 | 分类 |
+| description | description | string | 否 | 设置说明 | 描述 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+`SystemSettingsByCategory` 分组返回结构：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| category | category | string | 是 | 分类名 | 分类 |
+| settings | settings | array[SystemSettingsResponse] | 是 | 当前分类下的设置项 | 设置项 |
+
+### 3.15 PushChannel（推送渠道）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| name | name | string | 是 | 渠道名称 | 渠道名称 |
+| channel_type | channel_type | string | 是 | 渠道类型，如 `feishu/email/slack` | 渠道类型 |
+| is_enabled | is_enabled | boolean | 是 | 是否启用 | 启用状态 |
+| config | config | json | 是 | 渠道配置 | 渠道配置 |
+| description | description | string | 否 | 渠道描述 | 描述 |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+### 3.16 PushTask（推送任务）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| name | name | string | 是 | 任务名称 | 任务名称 |
+| description | description | string | 否 | 任务描述 | 描述 |
+| trigger_type | trigger_type | string | 是 | 触发方式，如 `scheduled/event_triggered/manual` | 触发方式 |
+| cron_expression | cron_expression | string | 否 | Cron 表达式 | Cron |
+| schedule_config | schedule_config | json | 否 | 调度配置 | 调度配置 |
+| channel_ids | channel_ids | array[string] | 是 | 目标渠道 ID 列表 | 渠道 ID 列表 |
+| template_id | template_id | string | 否 | 模板 ID | 模板 ID |
+| is_enabled | is_enabled | boolean | 是 | 是否启用 | 启用状态 |
+| status | status | string | 是 | 当前任务状态 | 状态 |
+| max_retries | max_retries | integer | 是 | 最大重试次数 | 最大重试 |
+| retry_interval | retry_interval | integer | 是 | 重试间隔（秒） | 重试间隔 |
+| event_type | event_type | string | 否 | 事件类型 | 事件类型 |
+| event_filters | event_filters | json | 否 | 事件过滤条件 | 事件过滤 |
+| content_config | content_config | json | 是 | 推送内容配置 | 内容配置 |
+| total_executions | total_executions | integer | 是 | 总执行次数 | 总执行次数 |
+| success_count | success_count | integer | 是 | 成功次数 | 成功次数 |
+| failure_count | failure_count | integer | 是 | 失败次数 | 失败次数 |
+| last_executed_at | last_executed_at | datetime | 否 | 最近执行时间 | 最近执行时间 |
+| next_scheduled_at | next_scheduled_at | datetime | 否 | 下次计划执行时间 | 下次执行时间 |
+| alert_on_failure | alert_on_failure | boolean | 是 | 是否失败告警 | 失败告警 |
+| alert_channel_id | alert_channel_id | string | 否 | 告警渠道 ID | 告警渠道 ID |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+### 3.17 PushRecord（推送记录）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| task_id | task_id | string | 是 | 关联任务 ID | 任务 ID |
+| channel_id | channel_id | string | 是 | 渠道 ID | 渠道 ID |
+| channel_type | channel_type | string | 是 | 渠道类型 | 渠道类型 |
+| status | status | string | 是 | 推送状态 | 状态 |
+| retry_count | retry_count | integer | 是 | 已重试次数 | 重试次数 |
+| max_retries | max_retries | integer | 是 | 最大重试次数 | 最大重试 |
+| next_retry_at | next_retry_at | datetime | 否 | 下次重试时间 | 下次重试时间 |
+| title | title | string | 是 | 推送标题 | 标题 |
+| content | content | text | 是 | 推送内容 | 内容 |
+| content_format | content_format | string | 是 | 内容格式 | 内容格式 |
+| recipients | recipients | array[string] | 是 | 接收者列表 | 接收者 |
+| response_data | response_data | json | 否 | 渠道响应原文 | 响应数据 |
+| error_message | error_message | string | 否 | 错误信息 | 错误信息 |
+| error_code | error_code | string | 否 | 错误码 | 错误码 |
+| started_at | started_at | datetime | 否 | 开始推送时间 | 开始时间 |
+| completed_at | completed_at | datetime | 否 | 完成推送时间 | 完成时间 |
+| duration_ms | duration_ms | float | 否 | 推送耗时（毫秒） | 耗时 |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+### 3.18 PushTemplate（推送模板）
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| id | id | string | 是 | 主键 UUID | ID |
+| name | name | string | 是 | 模板名称 | 模板名称 |
+| description | description | string | 否 | 模板描述 | 描述 |
+| channel_types | channel_types | array[string] | 是 | 适用渠道类型列表 | 渠道类型 |
+| title_template | title_template | string | 是 | 标题模板 | 标题模板 |
+| content_template | content_template | text | 是 | 内容模板 | 内容模板 |
+| content_format | content_format | string | 是 | 内容格式，如 `text/html/markdown/rich_text` | 内容格式 |
+| variables | variables | json | 是 | 模板变量定义 | 变量定义 |
+| default_values | default_values | json | 是 | 默认变量值 | 默认值 |
+| is_enabled | is_enabled | boolean | 是 | 是否启用 | 启用状态 |
+| is_system | is_system | boolean | 是 | 是否系统模板 | 系统模板 |
+| created_at | created_at | datetime | 是 | 创建时间 | 创建时间 |
+| updated_at | updated_at | datetime | 是 | 更新时间 | 更新时间 |
+
+模板预览响应 `PushTemplatePreviewResponse`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| rendered_title | rendered_title | string | 是 | 渲染后的标题 | 预览标题 |
+| rendered_content | rendered_content | text | 是 | 渲染后的内容 | 预览内容 |
+| content_format | content_format | string | 是 | 渲染后内容格式 | 内容格式 |
+
+### 3.19 PushStats（推送统计）
+
+顶层响应 `PushStatsResponse`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| summary | summary | PushStatsSummary | 是 | 汇总统计 | 汇总统计 |
+| by_channel | by_channel | array[PushStatsByChannel] | 是 | 按渠道统计 | 按渠道统计 |
+| by_task | by_task | array[PushStatsByTask] | 是 | 按任务统计 | 按任务统计 |
+| error_distribution | error_distribution | array[PushErrorDistribution] | 是 | 错误分布 | 错误分布 |
+| trend | trend | array[PushTrendPoint] | 是 | 趋势数据 | 趋势数据 |
+
+`PushStatsSummary`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| total_tasks | total_tasks | integer | 是 | 总任务数 | 总任务数 |
+| enabled_tasks | enabled_tasks | integer | 是 | 启用任务数 | 启用任务数 |
+| total_records | total_records | integer | 是 | 总推送记录数 | 总记录数 |
+| success_count | success_count | integer | 是 | 成功次数 | 成功次数 |
+| failed_count | failed_count | integer | 是 | 失败次数 | 失败次数 |
+| pending_count | pending_count | integer | 是 | 待处理次数 | 待处理次数 |
+| retrying_count | retrying_count | integer | 是 | 重试中次数 | 重试中次数 |
+| success_rate | success_rate | float | 是 | 成功率（百分比） | 成功率 |
+| avg_duration_ms | avg_duration_ms | float | 否 | 平均耗时 | 平均耗时 |
+
+`PushStatsByChannel`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| channel_type | channel_type | string | 是 | 渠道类型 | 渠道类型 |
+| channel_name | channel_name | string | 是 | 渠道名称 | 渠道名称 |
+| total_count | total_count | integer | 是 | 总推送数 | 总数 |
+| success_count | success_count | integer | 是 | 成功数 | 成功数 |
+| failed_count | failed_count | integer | 是 | 失败数 | 失败数 |
+| success_rate | success_rate | float | 是 | 成功率 | 成功率 |
+
+`PushStatsByTask`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| task_id | task_id | string | 是 | 任务 ID | 任务 ID |
+| task_name | task_name | string | 是 | 任务名称 | 任务名称 |
+| total_count | total_count | integer | 是 | 总推送数 | 总数 |
+| success_count | success_count | integer | 是 | 成功数 | 成功数 |
+| failed_count | failed_count | integer | 是 | 失败数 | 失败数 |
+| success_rate | success_rate | float | 是 | 成功率 | 成功率 |
+| last_executed_at | last_executed_at | datetime | 否 | 最近执行时间 | 最近执行时间 |
+
+`PushErrorDistribution`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| error_code | error_code | string | 否 | 错误码 | 错误码 |
+| error_message | error_message | string | 否 | 错误信息 | 错误信息 |
+| count | count | integer | 是 | 出现次数 | 次数 |
+| percentage | percentage | float | 是 | 占比 | 占比 |
+
+`PushTrendPoint`：
+
+| 字段名 | 字段标识 | 类型 | 必填 | 说明 | 中文展示名 |
+|--------|----------|------|------|------|------------|
+| date | date | string | 是 | 日期，格式 `YYYY-MM-DD` | 日期 |
+| total_count | total_count | integer | 是 | 总推送数 | 总数 |
+| success_count | success_count | integer | 是 | 成功数 | 成功数 |
+| failed_count | failed_count | integer | 是 | 失败数 | 失败数 |
+| success_rate | success_rate | float | 是 | 成功率 | 成功率 |
 
 ---
 
@@ -317,7 +621,7 @@ WeeklyReport (周报)
 ```typescript
 const COMPANY_LABELS = {
   alibaba: '阿里',
-  bytedance: '字节',
+  byte_dance: '字节',
   tencent: '腾讯'
 }
 ```
@@ -433,11 +737,19 @@ const DEDUPE_STATUS_LABELS = {
 
 ```typescript
 export type Company = 'alibaba' | 'bytedance' | 'tencent'
+```
+
+实际后端 schema 当前使用：
+
+```typescript
+export type Company = 'alibaba' | 'byte_dance' | 'tencent'
 
 export type SourceType = 'official_doc' | 'official_blog' | 'product_site' | 
   'changelog' | 'github' | 'media' | 'app_page' | 'open_platform'
 
-export type CrawlType = 'model_intel' | 'product_intel' | 'news_intel' | 'strategy_intel'
+export type CrawlStrategy = 'single_page' | 'multi_page' | 'search_keyword' | 'social_media'
+
+export type SocialPlatform = 'twitter' | 'weibo' | 'wechat' | 'other'
 
 export type EventType = 'release' | 'update' | 'upgrade' | 'price_cut' | 
   'open_source' | 'integration' | 'partnership' | 'strategic' | 
@@ -446,7 +758,7 @@ export type EventType = 'release' | 'update' | 'upgrade' | 'price_cut' |
 export type EntityType = 'model' | 'product' | 'platform' | 'api' | 
   'sdk' | 'agent' | 'organization' | 'strategy' | 'pricing'
 
-export type ImportanceLevel = 'p0' | 'p1' | 'p2' | 'p3'
+export type ImportanceLevel = 'high' | 'medium' | 'low'
 
 export type Confidence = 'high' | 'medium' | 'low'
 
@@ -454,11 +766,13 @@ export type InsightType = 'trend' | 'competitor' | 'opportunity' | 'risk' | 'sug
 
 export type CapabilityLevel = 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'l6'
 
-export type ReviewStatus = 'pending' | 'confirmed' | 'modified' | 'rejected'
+export type ReviewStatus = 'pending' | 'confirmed' | 'rejected' | 'insight_generated'
 
 export type CrawlStatus = 'pending' | 'crawling' | 'success' | 'failed' | 'parse_error'
 
 export type DedupeStatus = 'new' | 'duplicate' | 'pending'
+
+export type Priority = 'high' | 'medium' | 'low'
 ```
 
 ### 5.2 实体接口
@@ -473,8 +787,12 @@ export interface Source {
   enabled: boolean
   schedule?: string
   parser_type?: string
-  priority: ImportanceLevel
+  priority: Priority
   notes?: string
+  crawl_strategy: CrawlStrategy
+  crawl_config?: Record<string, unknown>
+  social_platform?: SocialPlatform
+  social_account_id?: string
   created_at: string
   updated_at: string
 }
@@ -501,7 +819,7 @@ export interface Fact {
   raw_record_id: string
   company: Company
   fact_summary: string
-  topic_level_1: string
+  topic_level_1: '产品技术' | '商业模式' | '市场竞争' | '组织管理' | '财务表现' | '法律合规' | '其他'
   topic_level_2?: string
   event_type: EventType
   entity_type: EntityType
@@ -574,13 +892,12 @@ export interface ResearchTopic {
 
 export interface WeeklyReport {
   id: string
-  report_name: string
-  report_type: 'daily' | 'weekly' | 'special'
-  generated_at: string
-  status: 'draft' | 'published'
-  content: string
-  facts_count?: number
-  insights_count?: number
+  title: string
+  company: string
+  start_date: string
+  end_date: string
+  status: string
+  content: Record<string, unknown>
   created_at: string
   updated_at: string
 }
@@ -589,6 +906,8 @@ export interface WeeklyReport {
 ---
 
 ## 6. API 契约
+
+> 2026-04-12 校准说明：本契约文档最初覆盖的是核心链路实体。当前代码中的实际 API 域已经扩展到 `dashboard`、`logs`、`ai_models`、`prompt_templates`、`crawl_tasks`、`system_settings`、`reports`、`push` 等模块，这些模块的详细契约应逐步补齐；在补齐前，请同时参考 `docs/current-state.md` 和后端路由实现。
 
 ### 6.1 通用响应格式
 
@@ -669,6 +988,53 @@ interface InsightFilter {
 }
 ```
 
+### 6.4 当前已实现 API 域总览（2026-04-12）
+
+以下域已经在 `/api/v1` 下有真实后端实现：
+
+| 域 | 路由前缀 | 当前能力概览 |
+|----|----------|--------------|
+| dashboard | `/dashboard` | 仪表盘统计、公司统计、趋势数据 |
+| sources | `/sources` | 信息源分页查询、详情、创建、更新、删除 |
+| raw_records | `/raw-records` | 原始记录分页查询、详情、创建、状态更新 |
+| facts | `/facts` | 事实分页查询、创建、详情、复核 |
+| insights | `/insights` | 洞察分页查询、创建、详情 |
+| logs | `/logs` | 操作日志、AI 调用日志查询 |
+| ai_models | `/ai-models` | 模型分页查询、详情、创建、更新、删除、测试 |
+| prompt_templates | `/prompt-templates` | Prompt 模板分页查询、详情、创建、更新、删除、测试 |
+| crawl_tasks | `/crawl-tasks` | 任务分页查询、统计、详情、创建、取消 |
+| system_settings | `/settings` | 设置分类读取、分类更新、单项读取、单项更新 |
+| reports | `/reports` | 报告列表、生成、详情、删除 |
+| push | `/push` | 渠道、任务、记录、模板、统计、事件触发 |
+
+### 6.5 扩展域请求 / 返回模型映射
+
+| 域 | 创建 / 更新请求 | 主要返回模型 |
+|----|-----------------|--------------|
+| ai_models | `AIModelCreate` / `AIModelUpdate` | `AIModelResponse` |
+| prompt_templates | `PromptTemplateCreate` / `PromptTemplateUpdate` | `PromptTemplateResponse` |
+| crawl_tasks | `CrawlTaskCreate` | `CrawlTaskResponse` / `CrawlTaskStats` |
+| logs.operations | `OperationLogCreate` | `OperationLogResponse` |
+| logs.ai | `AILogCreate` | `AILogResponse` |
+| system_settings | `SystemSettingsUpdate` | `SystemSettingsResponse` / `SystemSettingsByCategory` |
+| reports | `WeeklyReportCreate` | `WeeklyReportResponse` |
+| push.channels | `PushChannelCreate` / `PushChannelUpdate` | `PushChannelResponse` |
+| push.tasks | `PushTaskCreate` / `PushTaskUpdate` / `PushTaskTriggerRequest` | `PushTaskResponse` / `PushRecordResponse` |
+| push.records | `PushRecordRetryRequest` | `PushRecordResponse` |
+| push.templates | `PushTemplateCreate` / `PushTemplateUpdate` / `PushTemplatePreviewRequest` | `PushTemplateResponse` / `PushTemplatePreviewResponse` |
+| push.stats | 无 | `PushStatsResponse` |
+
+详细 schema 位置：
+
+- `apps/api/schemas/ai_model.py`
+- `apps/api/schemas/ai_log.py`
+- `apps/api/schemas/operation_log.py`
+- `apps/api/schemas/prompt_template.py`
+- `apps/api/schemas/crawl_task.py`
+- `apps/api/schemas/system_settings.py`
+- `apps/api/schemas/weekly_report.py`
+- `apps/api/schemas/push.py`
+
 ---
 
 ## 7. 版本历史
@@ -676,3 +1042,4 @@ interface InsightFilter {
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v1.0 | 2026-04-10 | 初始版本，定义数据契约 |
+| v1.1 | 2026-04-12 | 按真实 schema / router 完成第一轮 BG-003 校准 |

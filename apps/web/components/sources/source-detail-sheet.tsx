@@ -177,7 +177,7 @@ ${source.crawl_config?.list_url || "https://example.com/articles"}?${source.craw
                   {(() => {
                     const keywords = source.crawl_config?.keywords;
                     if (!keywords) return <span className="text-sm text-muted-foreground">未配置</span>;
-                    const keywordList = Array.isArray(keywords) ? keywords : keywords.split(",").filter((k: string) => k.trim());
+                    const keywordList = keywords.filter((keyword) => keyword.trim());
                     if (keywordList.length === 0) return <span className="text-sm text-muted-foreground">未配置</span>;
                     return keywordList.map((keyword: string, index: number) => (
                       <Badge key={index} variant="outline" className="text-xs">
@@ -193,7 +193,9 @@ ${source.crawl_config?.list_url || "https://example.com/articles"}?${source.craw
               <div className="flex-1">
                 <p className="text-sm font-medium">搜索引擎</p>
                 <p className="text-sm text-muted-foreground">
-                  {searchEngineLabels[source.crawl_config?.search_engine] || source.crawl_config?.search_engine || "未配置"}
+                  {source.crawl_config?.search_engine
+                    ? searchEngineLabels[source.crawl_config.search_engine] || source.crawl_config.search_engine
+                    : "未配置"}
                 </p>
               </div>
             </div>

@@ -10,12 +10,10 @@ import { CrawlTask } from "@/types/crawl-tasks";
 import {
   Clock,
   Database,
-  FileText,
   AlertCircle,
   CheckCircle2,
   Loader2,
   XCircle,
-  PauseCircle,
   Eye,
   Ban,
 } from "lucide-react";
@@ -172,16 +170,18 @@ export function CrawlTaskCard({ task, onViewDetail, onCancel, className }: Crawl
           </Button>
           {isCancelable && onCancel && (
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onCancel(task)}
-                >
-                  <Ban className="h-3.5 w-3.5" />
-                  取消
-                </Button>
-              </TooltipTrigger>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onCancel(task)}
+                  >
+                    <Ban className="h-3.5 w-3.5" />
+                    取消
+                  </Button>
+                }
+              />
               <TooltipContent>
                 <p>取消此任务</p>
               </TooltipContent>

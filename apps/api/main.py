@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from config import settings
@@ -195,7 +196,7 @@ async def health_check():
     db_status = "disconnected"
     try:
         async with async_session() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
             db_status = "connected"
     except Exception as e:
         logger.error("Health check database connection failed", error=str(e))

@@ -202,11 +202,19 @@ git rev-parse HEAD
 
 | 技术 | 版本要求 | 说明 |
 |------|----------|------|
-| Next.js | 14.x | App Router |
+| Next.js | 16.x | App Router |
 | TypeScript | 5.x | 严格模式 |
-| Tailwind CSS | 3.x | 样式系统 |
+| Tailwind CSS | 4.x | 样式系统 |
 | shadcn/ui | 最新 | UI 组件库 |
 | Lucide React | 最新 | 图标库 |
+
+### 5.1.1 当前接手期补充规则
+
+| 规则 | 说明 |
+|------|------|
+| 历史文档不默认等于当前实现 | 规划文档与 worklog 仅代表历史过程，当前实现以 `docs/current-state.md` 为准 |
+| 接手期先稳基线再扩功能 | 先恢复 lint/build/运行手册，再继续功能扩展 |
+| 运行方式统一记录到 runbook | 本地启动和验证方式统一维护在 `docs/runbook.md` |
 
 ### 5.2 组件策略
 

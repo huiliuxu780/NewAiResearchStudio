@@ -1,3 +1,21 @@
+export interface CrawlConfig {
+  list_url?: string;
+  list_item_selector?: string;
+  link_selector?: string;
+  detail_selector?: string;
+  content_selector?: string;
+  pagination_selector?: string;
+  max_pages?: number;
+  page_param?: string;
+  keywords?: string[];
+  search_engine?: string;
+  max_results?: number;
+  language?: string;
+  time_range?: string;
+  account_url?: string;
+  max_posts?: number;
+}
+
 export interface Source {
   id: string;
   name: string;
@@ -13,7 +31,7 @@ export interface Source {
   updated_at: string;
   // 采集策略相关字段
   crawl_strategy: string | null; // single_page, multi_page, search_keyword, social_media
-  crawl_config: Record<string, any> | null; // 采集配置
+  crawl_config: CrawlConfig | null; // 采集配置
   social_platform: string | null; // twitter, weibo, wechat, other
   social_account_id: string | null;
 }
@@ -106,6 +124,22 @@ export interface PromptTemplate {
   version: number;
   is_active: boolean;
   description: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIModel {
+  id: string;
+  name: string;
+  provider: string;
+  model_name: string;
+  api_base_url: string | null;
+  temperature: number;
+  max_tokens: number;
+  enabled: boolean;
+  is_default: boolean;
+  task_types: string[];
   notes: string | null;
   created_at: string;
   updated_at: string;
