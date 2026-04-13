@@ -10,6 +10,7 @@ import { PushChannelsTab } from "@/components/push/push-channels-tab";
 import { PushFlashBanner, type PushFlashMessage } from "@/components/push/push-flash-banner";
 import { PushMetricHints } from "@/components/push/push-metric-hints";
 import { PushRecordSheet } from "@/components/push/push-record-sheet";
+import { PushRiskRadar } from "@/components/push/push-risk-radar";
 import { formatJson } from "@/components/push/push-shared";
 import { PushStatsCards } from "@/components/push/push-stats";
 import { PushTaskEditorSheet } from "@/components/push/push-task-editor-sheet";
@@ -594,6 +595,25 @@ export default function PushPage() {
     }
   }
 
+  function handleInspectChannelRisk() {
+    setChannelEnabledFilter("false");
+    setChannelPage(1);
+    setActiveTab("channels");
+  }
+
+  function handleInspectTemplateRisk() {
+    setTemplateEnabledFilter("false");
+    setTemplatePage(1);
+    setActiveTab("templates");
+  }
+
+  function handleInspectRecordRisk() {
+    setRecordStatusFilter("failed");
+    setRecordTaskFocus(null);
+    setRecordPage(1);
+    setActiveTab("records");
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -639,6 +659,16 @@ export default function PushPage() {
       </div>
 
       {flashMessage && <PushFlashBanner message={flashMessage} />}
+
+      <PushRiskRadar
+        channels={taskEditorChannels.data?.items ?? []}
+        stats={stats.data}
+        tasks={recordFilterTasks.data?.items ?? []}
+        templates={taskEditorTemplates.data?.items ?? []}
+        onInspectChannelRisk={handleInspectChannelRisk}
+        onInspectRecordRisk={handleInspectRecordRisk}
+        onInspectTemplateRisk={handleInspectTemplateRisk}
+      />
 
       <PushStatsCards stats={stats.data} isLoading={stats.isLoading} />
       <PushAnalyticsPanel stats={stats.data} isLoading={stats.isLoading} />
