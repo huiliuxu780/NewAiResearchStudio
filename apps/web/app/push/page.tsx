@@ -719,8 +719,10 @@ export default function PushPage() {
                 taskStatusFilter={taskStatusFilter}
                 taskEnabledFilter={taskEnabledFilter}
                 data={tasks.data}
+                channelOptions={taskEditorChannels.data?.items ?? []}
                 error={tasks.error}
                 isLoading={tasks.isLoading}
+                templateOptions={taskEditorTemplates.data?.items ?? []}
                 updatingTaskId={updatingTaskId}
                 triggeringTaskId={triggeringTaskId}
                 onTaskTriggerChange={(value) => {

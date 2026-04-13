@@ -10,15 +10,17 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { PaginatedResponse } from "@/lib/api";
-import type { PushTask } from "@/types/push";
+import type { PushChannel, PushTask, PushTemplate } from "@/types/push";
 
 export function PushTasksTab({
   taskTriggerFilter,
   taskStatusFilter,
   taskEnabledFilter,
+  channelOptions,
   data,
   error,
   isLoading,
+  templateOptions,
   updatingTaskId,
   triggeringTaskId,
   onTaskTriggerChange,
@@ -38,9 +40,11 @@ export function PushTasksTab({
   taskTriggerFilter: string;
   taskStatusFilter: string;
   taskEnabledFilter: string;
+  channelOptions: PushChannel[];
   data?: PaginatedResponse<PushTask>;
   error?: Error;
   isLoading: boolean;
+  templateOptions: PushTemplate[];
   updatingTaskId: string | null;
   triggeringTaskId: string | null;
   onTaskTriggerChange: (value: string) => void;
@@ -79,6 +83,24 @@ export function PushTasksTab({
     summary.successCount + summary.failureCount > 0
       ? (summary.successCount / (summary.successCount + summary.failureCount)) * 100
       : 0;
+
+  const channelById = useMemo(
+    () =>
+      channelOptions.reduce<Record<string, PushChannel>>((acc, channel) => {
+        acc[channel.id] = channel;
+        return acc;
+      }, {}),
+    [channelOptions]
+  );
+
+  const templateById = useMemo(
+    () =>
+      templateOptions.reduce<Record<string, PushTemplate>>((acc, template) => {
+        acc[template.id] = template;
+        return acc;
+      }, {}),
+    [templateOptions]
+  );
 
   return (
     <Card className="border-border/40 bg-background/50 py-0">
@@ -151,7 +173,7 @@ export function PushTasksTab({
               <TableRow>
                 <TableHead>任务名称</TableHead>
                 <TableHead>触发方式</TableHead>
-                <TableHead>渠道数</TableHead>
+                <TableHead>编排资源</TableHead>
                 <TableHead>执行概览</TableHead>
                 <TableHead>健康度</TableHead>
                 <TableHead>最近执行</TableHead>
@@ -169,7 +191,9 @@ export function PushTasksTab({
                     </div>
                   </TableCell>
                   <TableCell>{getTriggerTypeLabel(task.trigger_type)}</TableCell>
-                  <TableCell>{task.channel_ids.length}</TableCell>
+                  <TableCell className="min-w-[260px] max-w-[320px] whitespace-normal">
+                    <TaskResourceCell task={task} channelById={channelById} templateById={templateById} />
+                  </TableCell>
                   <TableCell className="min-w-[180px]">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-foreground">{task.total_executions} 次</p>
@@ -290,6 +314,78 @@ function TaskSummaryCard({
       <p className="mt-3 text-2xl font-semibold text-foreground">
         {typeof value === "number" ? value.toLocaleString("zh-CN") : value}
       </p>
+    </div>
+  );
+}
+
+function TaskResourceCell({
+  task,
+  channelById,
+  templateById,
+}: {
+  task: PushTask;
+  channelById: Record<string, PushChannel>;
+  templateById: Record<string, PushTemplate>;
+}) {
+  const linkedChannels = task.channel_ids.map((channelId) => channelById[channelId]).filter(Boolean);
+  const disabledChannelCount = linkedChannels.filter((channel) => !channel.is_enabled).length;
+  const template = task.template_id ? templateById[task.template_id] : null;
+
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">模板</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-medium text-foreground">{template?.name ?? "未绑定模板"}</p>
+          {template && (
+            <Badge
+              variant="outline"
+              className={
+                template.is_enabled
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                  : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+              }
+            >
+              {template.is_enabled ? "可用" : "已停用"}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">渠道</p>
+        {linkedChannels.length ? (
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              {linkedChannels.slice(0, 2).map((channel) => (
+                <Badge
+                  key={channel.id}
+                  variant="outline"
+                  className={
+                    channel.is_enabled
+                      ? "border-border bg-background/60 text-foreground"
+                      : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                  }
+                >
+                  {channel.name}
+                </Badge>
+              ))}
+              {linkedChannels.length > 2 && (
+                <Badge variant="outline" className="border-border bg-background/60 text-muted-foreground">
+                  +{linkedChannels.length - 2}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {disabledChannelCount > 0
+                ? `包含 ${disabledChannelCount} 个停用渠道，建议检查发送链路。`
+                : `共 ${linkedChannels.length} 个启用中的发送渠道。`}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">未绑定渠道</p>
+        )}
+      </div>
     </div>
   );
 }
