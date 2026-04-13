@@ -2,6 +2,7 @@
 
 import { type ElementType, useMemo } from "react";
 import { AlertTriangle, BellRing, Eye, Loader2, Play, Plus, Send, TrendingUp } from "lucide-react";
+import { summarizeTaskRisk } from "@/lib/push-console-utils";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatPercent, getTriggerTypeLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,21 +109,22 @@ export function PushTasksTab({
     [templateOptions]
   );
 
-  const riskTaskIds = useMemo(() => {
-    const disabledChannelIds = new Set(channelOptions.filter((channel) => !channel.is_enabled).map((channel) => channel.id));
-    const disabledTemplateIds = new Set(templateOptions.filter((template) => !template.is_enabled).map((template) => template.id));
+  const riskSummaryByTaskId = useMemo(
+    () =>
+      (data?.items ?? []).reduce<Record<string, ReturnType<typeof summarizeTaskRisk>>>((acc, task) => {
+        acc[task.id] = summarizeTaskRisk(task, channelById, templateById);
+        return acc;
+      }, {}),
+    [channelById, data?.items, templateById]
+  );
 
+  const riskTaskIds = useMemo(() => {
     return new Set(
       (data?.items ?? [])
-        .filter(
-          (task) =>
-            task.failure_count > 0 ||
-            (task.template_id ? disabledTemplateIds.has(task.template_id) : false) ||
-            task.channel_ids.some((channelId) => disabledChannelIds.has(channelId))
-        )
+        .filter((task) => riskSummaryByTaskId[task.id]?.hasRisk)
         .map((task) => task.id)
     );
-  }, [channelOptions, data?.items, templateOptions]);
+  }, [data?.items, riskSummaryByTaskId]);
 
   const riskTaskCount = riskTaskIds.size;
 
@@ -268,11 +270,7 @@ export function PushTasksTab({
                           )}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {task.failure_count > 0
-                          ? `最近累计失败 ${task.failure_count} 次，建议优先查看记录页。`
-                          : "当前没有累计失败记录。"}
-                      </p>
+                      <TaskRiskSummary task={task} summary={riskSummaryByTaskId[task.id]} />
                     </div>
                   </TableCell>
                   <TableCell>{formatDateTime(task.last_executed_at)}</TableCell>
@@ -437,6 +435,37 @@ function TaskResourceCell({
           <p className="text-sm text-muted-foreground">未绑定渠道</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function TaskRiskSummary({
+  task,
+  summary,
+}: {
+  task: PushTask;
+  summary?: {
+    hasRisk: boolean;
+    reasons: string[];
+  };
+}) {
+  if (!summary?.hasRisk) {
+    return <p className="text-xs text-muted-foreground">当前没有累计失败或依赖异常。</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {summary.reasons.map((reason) => (
+          <Badge key={reason} variant="outline" className="border-amber-500/20 bg-amber-500/10 text-amber-400">
+            <AlertTriangle className="mr-1 h-3 w-3" />
+            {reason}
+          </Badge>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {task.failure_count > 0 ? "建议优先切到记录页查看失败明细。" : "建议优先修复依赖异常后再继续启用或触发。"}
+      </p>
     </div>
   );
 }

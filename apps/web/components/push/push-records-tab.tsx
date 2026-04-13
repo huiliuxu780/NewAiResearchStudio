@@ -37,9 +37,12 @@ export function PushRecordsTab({
   onRecordPageSizeChange,
   onViewRecord,
   selectedRecordIds,
+  selectedRecordTaskCount,
+  selectedRecordTaskName,
   onToggleRecordSelection,
   onSelectRetryableRecords,
   onClearRecordSelection,
+  onFocusSelectedTask,
   onRetryRecord,
   onRetrySelectedRecords,
   isBatchRetrying,
@@ -67,9 +70,12 @@ export function PushRecordsTab({
   onRecordPageSizeChange: (size: number) => void;
   onViewRecord: (record: PushRecord) => void;
   selectedRecordIds: string[];
+  selectedRecordTaskCount: number;
+  selectedRecordTaskName?: string | null;
   onToggleRecordSelection: (recordId: string, checked: boolean) => void;
   onSelectRetryableRecords: (recordIds: string[]) => void;
   onClearRecordSelection: () => void;
+  onFocusSelectedTask?: () => void;
   onRetryRecord: (record: PushRecord) => void;
   onRetrySelectedRecords: () => void;
   isBatchRetrying: boolean;
@@ -237,6 +243,15 @@ export function PushRecordsTab({
                 <p className="text-xs text-muted-foreground">
                   当前页共有 {retryableRecords.length} 条失败记录可重试，已选 {selectedRetryableCount} 条。
                 </p>
+                {selectedRetryableCount ? (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedRecordTaskCount === 1 && selectedRecordTaskName
+                      ? `所选记录全部来自任务「${selectedRecordTaskName}」，可以直接聚焦排查。`
+                      : selectedRecordTaskCount > 1
+                        ? `所选记录涉及 ${selectedRecordTaskCount} 个任务，先收敛到单一任务会更容易定位。`
+                        : "当前未形成可聚焦的任务上下文。"}
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -249,6 +264,14 @@ export function PushRecordsTab({
                 </Button>
                 <Button size="sm" variant="ghost" onClick={onClearRecordSelection} disabled={!selectedRetryableCount || isBatchRetrying}>
                   清空选择
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onFocusSelectedTask}
+                  disabled={selectedRecordTaskCount !== 1 || !selectedRetryableCount || isBatchRetrying}
+                >
+                  {selectedRecordTaskCount === 1 && selectedRecordTaskName ? `聚焦任务：${selectedRecordTaskName}` : "按任务聚焦"}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={onRetrySelectedRecords} disabled={!selectedRetryableCount || isBatchRetrying}>
                   {isBatchRetrying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}

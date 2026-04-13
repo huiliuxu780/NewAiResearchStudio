@@ -198,6 +198,17 @@ export default function PushPage() {
     () => getRetryableRecords(currentRecordItems).filter((record) => selectedRecordIds.includes(record.id)),
     [currentRecordItems, selectedRecordIds]
   );
+  const selectedRetryableTaskIds = useMemo(
+    () => [...new Set(selectedRetryableRecords.map((record) => record.task_id))],
+    [selectedRetryableRecords]
+  );
+  const selectedRetryableTaskName = useMemo(() => {
+    if (selectedRetryableTaskIds.length !== 1) {
+      return null;
+    }
+
+    return dependencyTasks.find((task) => task.id === selectedRetryableTaskIds[0])?.name ?? null;
+  }, [dependencyTasks, selectedRetryableTaskIds]);
 
   const updateChannelMutation = useUpdatePushChannel();
   const createChannelMutation = useCreatePushChannel();
@@ -610,6 +621,15 @@ export default function PushPage() {
     }
   }
 
+  function handleFocusSelectedRecordTask() {
+    if (selectedRetryableTaskIds.length !== 1) return;
+
+    const taskId = selectedRetryableTaskIds[0];
+    const taskName = selectedRetryableTaskName ?? dependencyTasks.find((task) => task.id === taskId)?.name ?? "关联任务";
+    setRecordTaskFocus({ id: taskId, name: taskName });
+    setRecordPage(1);
+  }
+
   async function handlePreviewTemplate(template: PushTemplate, nextVariablesText?: string) {
     setPreviewError(null);
     setPreviewingTemplateId(template.id);
@@ -983,6 +1003,8 @@ export default function PushPage() {
                 }}
                 onViewRecord={setSelectedRecord}
                 selectedRecordIds={selectedRecordIds}
+                selectedRecordTaskCount={selectedRetryableTaskIds.length}
+                selectedRecordTaskName={selectedRetryableTaskName}
                 onToggleRecordSelection={(recordId, checked) =>
                   setSelectedRecordIds((current) =>
                     checked ? [...new Set([...current, recordId])] : current.filter((id) => id !== recordId)
@@ -990,6 +1012,7 @@ export default function PushPage() {
                 }
                 onSelectRetryableRecords={(recordIds) => setSelectedRecordIds(recordIds)}
                 onClearRecordSelection={() => setSelectedRecordIds([])}
+                onFocusSelectedTask={handleFocusSelectedRecordTask}
                 onRetryRecord={(record) => void handleRetryRecord(record)}
                 onRetrySelectedRecords={() => void handleBatchRetryRecords()}
                 isBatchRetrying={batchRetryingRecords}

@@ -5,6 +5,7 @@ import {
   buildTemplateDependencyMessage,
   getRetryableRecords,
   summarizeChannelDependencies,
+  summarizeTaskRisk,
   summarizeTemplateDependencies,
 } from "../lib/push-console-utils.ts";
 
@@ -105,6 +106,30 @@ test("buildTemplateDependencyMessage warns when enabled tasks still use the temp
   assert.match(message, /主模板/);
   assert.match(message, /欢迎消息/);
   assert.match(message, /发送链路会受影响/);
+});
+
+test("summarizeTaskRisk collects failure, disabled template and disabled channel reasons", () => {
+  const summary = summarizeTaskRisk(
+    {
+      id: "task-1",
+      name: "欢迎消息",
+      failure_count: 3,
+      channel_ids: ["channel-1", "channel-2"],
+      template_id: "template-1",
+    } as never,
+    {
+      "channel-1": { id: "channel-1", is_enabled: true },
+      "channel-2": { id: "channel-2", is_enabled: false },
+    } as never,
+    {
+      "template-1": { id: "template-1", is_enabled: false },
+    } as never
+  );
+
+  assert.equal(summary.hasRisk, true);
+  assert.equal(summary.disabledChannelCount, 1);
+  assert.equal(summary.disabledTemplate, true);
+  assert.deepEqual(summary.reasons, ["累计失败 3 次", "模板已停用", "1 个渠道已停用"]);
 });
 
 test("getRetryableRecords only returns failed records", () => {
