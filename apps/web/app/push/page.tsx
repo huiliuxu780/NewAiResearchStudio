@@ -622,11 +622,12 @@ export default function PushPage() {
 
   function handleInspectRecordRisk() {
     setFocusMode("record-risk");
-    setRecordStatusFilter("failed");
+    setRecordStatusFilter("all");
     setRecordTaskFocus(null);
     setRecordChannelFilter("all");
     setRecordChannelIdFilter("all");
     setRecordPage(1);
+    setRecordPageSize(100);
     setActiveTab("records");
   }
 
@@ -832,7 +833,9 @@ export default function PushPage() {
                 focusedTaskName={recordTaskFocus?.name ?? null}
                 data={records.data}
                 error={records.error}
+                focusMode={focusMode === "record-risk" ? "risk" : "all"}
                 isLoading={records.isLoading}
+                onClearFocusMode={clearFocusMode}
                 retryingRecordId={retryingRecordId}
                 onRecordStatusChange={(value) => {
                   setRecordStatusFilter(value);

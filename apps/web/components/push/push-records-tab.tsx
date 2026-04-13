@@ -22,7 +22,9 @@ export function PushRecordsTab({
   focusedTaskName,
   data,
   error,
+  focusMode = "all",
   isLoading,
+  onClearFocusMode,
   retryingRecordId,
   onRecordStatusChange,
   onRecordChannelChange,
@@ -43,7 +45,9 @@ export function PushRecordsTab({
   focusedTaskName?: string | null;
   data?: PaginatedResponse<PushRecord>;
   error?: Error;
+  focusMode?: "all" | "risk";
   isLoading: boolean;
+  onClearFocusMode?: () => void;
   retryingRecordId: string | null;
   onRecordStatusChange: (value: string) => void;
   onRecordChannelChange: (value: string) => void;
@@ -73,10 +77,19 @@ export function PushRecordsTab({
     [channelOptions]
   );
 
-  const summary = useMemo(() => {
-    const counts = { total: data?.items.length ?? 0, success: 0, failed: 0, retrying: 0, pending: 0 };
+  const displayItems = useMemo(
+    () =>
+      focusMode === "risk"
+        ? (data?.items ?? []).filter((record) => record.status === "failed" || record.status === "retrying" || record.status === "pending")
+        : (data?.items ?? []),
+    [data?.items, focusMode]
+  );
 
-    (data?.items ?? []).forEach((record) => {
+  const summary = useMemo(() => {
+    const counts = { total: 0, success: 0, failed: 0, retrying: 0, pending: 0 };
+
+    displayItems.forEach((record) => {
+      counts.total += 1;
       if (record.status === "success") counts.success += 1;
       if (record.status === "failed") counts.failed += 1;
       if (record.status === "retrying") counts.retrying += 1;
@@ -84,7 +97,7 @@ export function PushRecordsTab({
     });
 
     return counts;
-  }, [data?.items]);
+  }, [displayItems]);
 
   return (
     <Card className="border-border/40 bg-background/50 py-0">
@@ -158,6 +171,18 @@ export function PushRecordsTab({
         </div>
       </CardHeader>
 
+      {focusMode === "risk" && (
+        <CardContent className="flex flex-col gap-3 border-b border-border/50 py-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">专注视图：发送积压</p>
+            <p className="text-xs text-muted-foreground">仅显示失败、重试中和待处理的记录，优先处理真正阻塞发送的积压。</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={onClearFocusMode}>
+            退出专注视图
+          </Button>
+        </CardContent>
+      )}
+
       {error ? (
         <CardContent className="py-8 text-sm text-destructive">{error.message}</CardContent>
       ) : isLoading ? (
@@ -187,7 +212,7 @@ export function PushRecordsTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.items.map((record) => (
+              {displayItems.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell className="max-w-[280px] whitespace-normal">
                     <div className="space-y-1">
@@ -248,7 +273,11 @@ export function PushRecordsTab({
         </>
       ) : (
         <CardContent className="pt-4">
-          <PushSectionEmpty icon={Send} title="暂无执行记录" description="切换筛选条件，或者先从任务 tab 手动触发一轮推送。" />
+          <PushSectionEmpty
+            icon={Send}
+            title={focusMode === "risk" ? "当前结果里没有发送积压" : "暂无执行记录"}
+            description={focusMode === "risk" ? "可以退出专注视图，或扩大筛选范围后再看一轮。" : "切换筛选条件，或者先从任务 tab 手动触发一轮推送。"}
+          />
         </CardContent>
       )}
     </Card>
