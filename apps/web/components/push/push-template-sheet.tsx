@@ -2,30 +2,38 @@
 
 import { AlertTriangle, Braces, Copy, FileText, PencilLine, Sparkles, ToggleLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { PushTemplate } from "@/types/push";
+import { PushTask, PushTemplate } from "@/types/push";
 import { PushDetailRow, formatDateTime, formatJson, getContentFormatLabel } from "@/components/push/push-shared";
 
 export function PushTemplateSheet({
   template,
   open,
   onOpenChange,
+  dependentTasks,
   onEditTemplate,
   onDuplicateTemplate,
+  onInspectTask,
   onPreviewTemplate,
   onInspectRisk,
 }: {
   template: PushTemplate | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  dependentTasks?: PushTask[];
   onEditTemplate?: (template: PushTemplate) => void;
   onDuplicateTemplate?: (template: PushTemplate) => void;
+  onInspectTask?: (task: PushTask) => void;
   onPreviewTemplate?: (template: PushTemplate) => void;
   onInspectRisk?: () => void;
 }) {
   if (!template) return null;
+
+  const linkedTasks = (dependentTasks ?? []).filter((task) => task.template_id === template.id);
+  const enabledTaskCount = linkedTasks.filter((task) => task.is_enabled).length;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -67,6 +75,32 @@ export function PushTemplateSheet({
             <PushDetailRow icon={FileText} label="内容格式" value={getContentFormatLabel(template.content_format)} />
             <PushDetailRow icon={FileText} label="适用渠道" value={template.channel_types.join("、")} />
             <PushDetailRow icon={FileText} label="更新时间" value={formatDateTime(template.updated_at)} />
+
+            {linkedTasks.length ? (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">依赖任务</p>
+                    <Badge variant="outline" className="border-sky-500/20 bg-sky-500/10 text-sky-400">
+                      共 {linkedTasks.length} 个
+                    </Badge>
+                    {enabledTaskCount ? (
+                      <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                        启用中 {enabledTaskCount}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {linkedTasks.map((task) => (
+                      <Button key={task.id} size="sm" variant="outline" onClick={() => onInspectTask?.(task)}>
+                        {task.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : null}
 
             {template.description && (
               <>

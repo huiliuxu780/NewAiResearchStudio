@@ -2,30 +2,43 @@
 
 import { BellRing, Clock3, Copy, Filter, PencilLine, Play, Repeat, Send, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { PushTask } from "@/types/push";
-import { PushDetailRow, PushStatusBadge, formatDateTime, formatJson, getTriggerTypeLabel } from "@/components/push/push-shared";
+import { PushChannel, PushTask, PushTemplate } from "@/types/push";
+import { PushDetailRow, PushStatusBadge, formatDateTime, formatJson, getChannelTypeLabel, getTriggerTypeLabel } from "@/components/push/push-shared";
 
 export function PushTaskSheet({
   task,
   open,
   onOpenChange,
+  channels,
+  templates,
   onEditTask,
   onDuplicateTask,
   onInspectRecords,
+  onInspectChannel,
+  onInspectTemplate,
   onTriggerTask,
 }: {
   task: PushTask | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  channels?: PushChannel[];
+  templates?: PushTemplate[];
   onEditTask?: (task: PushTask) => void;
   onDuplicateTask?: (task: PushTask) => void;
   onInspectRecords?: (task: PushTask) => void;
+  onInspectChannel?: (channel: PushChannel) => void;
+  onInspectTemplate?: (template: PushTemplate) => void;
   onTriggerTask?: (task: PushTask) => void;
 }) {
   if (!task) return null;
+
+  const linkedChannels = (channels ?? []).filter((channel) => task.channel_ids.includes(channel.id));
+  const linkedTemplate = task.template_id ? (templates ?? []).find((template) => template.id === task.template_id) ?? null : null;
+  const alertChannel = task.alert_channel_id ? (channels ?? []).find((channel) => channel.id === task.alert_channel_id) ?? null : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -72,6 +85,57 @@ export function PushTaskSheet({
             <PushDetailRow icon={Clock3} label="下次执行" value={formatDateTime(task.next_scheduled_at)} />
             <PushDetailRow icon={Repeat} label="最大重试" value={`${task.max_retries} 次 / ${task.retry_interval} 秒`} />
             <PushDetailRow icon={ShieldAlert} label="失败告警" value={task.alert_on_failure ? "开启" : "关闭"} />
+
+            {(linkedTemplate || linkedChannels.length || alertChannel) && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-foreground">关联对象</p>
+
+                  {linkedTemplate ? (
+                    <div className="rounded-lg border border-border bg-muted/30 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">{linkedTemplate.name}</p>
+                          <p className="text-xs text-muted-foreground">模板 · {linkedTemplate.is_enabled ? "已启用" : "已停用"}</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => onInspectTemplate?.(linkedTemplate)}>
+                          查看模板
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {linkedChannels.length ? (
+                    <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">发送渠道</p>
+                      <div className="flex flex-wrap gap-2">
+                        {linkedChannels.map((channel) => (
+                          <Button key={channel.id} size="sm" variant="outline" onClick={() => onInspectChannel?.(channel)}>
+                            {channel.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {alertChannel ? (
+                    <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="border-amber-500/20 bg-amber-500/10 text-amber-400">
+                          告警渠道
+                        </Badge>
+                        <p className="text-sm font-medium text-foreground">{alertChannel.name}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{getChannelTypeLabel(alertChannel.channel_type)}</p>
+                      <Button size="sm" variant="outline" onClick={() => onInspectChannel?.(alertChannel)}>
+                        查看告警渠道
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            )}
 
             {task.description && (
               <>

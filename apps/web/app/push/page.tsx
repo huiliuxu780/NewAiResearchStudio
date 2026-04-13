@@ -205,6 +205,19 @@ export default function PushPage() {
   });
   const taskEditorTemplates = usePushTemplates({ page: 1, page_size: 100 });
   const dependencyTasks = useMemo(() => recordFilterTasks.data?.items ?? [], [recordFilterTasks.data?.items]);
+  const selectedChannelDependencies = useMemo(
+    () =>
+      selectedChannel
+        ? dependencyTasks.filter(
+            (task) => task.channel_ids.includes(selectedChannel.id) || task.alert_channel_id === selectedChannel.id
+          )
+        : [],
+    [dependencyTasks, selectedChannel]
+  );
+  const selectedTemplateDependencies = useMemo(
+    () => (detailTemplate ? dependencyTasks.filter((task) => task.template_id === detailTemplate.id) : []),
+    [dependencyTasks, detailTemplate]
+  );
   const currentRecordItems = useMemo(() => records.data?.items ?? [], [records.data?.items]);
   const selectedRetryableRecords = useMemo(
     () => getRetryableRecords(currentRecordItems).filter((record) => selectedRecordIds.includes(record.id)),
@@ -1268,6 +1281,7 @@ export default function PushPage() {
         channel={selectedChannel}
         open={!!selectedChannel}
         onOpenChange={(open) => !open && setSelectedChannel(null)}
+        dependentTasks={selectedChannelDependencies}
         onEditChannel={(channel) => {
           setSelectedChannel(null);
           setChannelDraftSource(null);
@@ -1283,6 +1297,10 @@ export default function PushPage() {
         onInspectRecords={(channel) => {
           setSelectedChannel(null);
           handleInspectChannelRecords(channel);
+        }}
+        onInspectTask={(task) => {
+          setSelectedChannel(null);
+          setSelectedTask(task);
         }}
         onInspectRisk={() => {
           setSelectedChannel(null);
@@ -1337,6 +1355,8 @@ export default function PushPage() {
         task={selectedTask}
         open={!!selectedTask}
         onOpenChange={(open) => !open && setSelectedTask(null)}
+        channels={taskEditorChannels.data?.items ?? []}
+        templates={taskEditorTemplates.data?.items ?? []}
         onEditTask={(task) => {
           setSelectedTask(null);
           setTaskDraftSource(null);
@@ -1352,6 +1372,14 @@ export default function PushPage() {
         onInspectRecords={(task) => {
           setSelectedTask(null);
           handleInspectTaskRecords(task);
+        }}
+        onInspectChannel={(channel) => {
+          setSelectedTask(null);
+          setSelectedChannel(channel);
+        }}
+        onInspectTemplate={(template) => {
+          setSelectedTask(null);
+          setDetailTemplate(template);
         }}
         onTriggerTask={(task) => {
           setSelectedTask(null);
@@ -1371,6 +1399,7 @@ export default function PushPage() {
         template={detailTemplate}
         open={!!detailTemplate}
         onOpenChange={(open) => !open && setDetailTemplate(null)}
+        dependentTasks={selectedTemplateDependencies}
         onEditTemplate={(template) => {
           setDetailTemplate(null);
           setTemplateDraftSource(null);
@@ -1382,6 +1411,10 @@ export default function PushPage() {
           setEditingTemplate(null);
           setTemplateDraftSource(template);
           setTemplateEditorOpen(true);
+        }}
+        onInspectTask={(task) => {
+          setDetailTemplate(null);
+          setSelectedTask(task);
         }}
         onPreviewTemplate={handleOpenTemplatePreview}
         onInspectRisk={() => {
