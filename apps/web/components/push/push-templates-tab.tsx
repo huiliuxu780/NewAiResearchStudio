@@ -19,6 +19,7 @@ export function PushTemplatesTab({
   error,
   focusMode = "all",
   isLoading,
+  onEnterFocusMode,
   onClearFocusMode,
   selectedTemplate,
   taskOptions,
@@ -43,6 +44,7 @@ export function PushTemplatesTab({
   error?: Error;
   focusMode?: "all" | "risk";
   isLoading: boolean;
+  onEnterFocusMode?: () => void;
   onClearFocusMode?: () => void;
   selectedTemplate: PushTemplate | null;
   taskOptions: PushTask[];
@@ -83,6 +85,11 @@ export function PushTemplatesTab({
     [data?.items, focusMode, usageByTemplateId]
   );
 
+  const riskTemplateCount = useMemo(
+    () => (data?.items ?? []).filter((template) => !template.is_enabled && (usageByTemplateId[template.id]?.enabled ?? 0) > 0).length,
+    [data?.items, usageByTemplateId]
+  );
+
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_380px]">
       <Card className="border-border/40 bg-background/50 py-0">
@@ -92,6 +99,12 @@ export function PushTemplatesTab({
             <CardDescription>选择模板后会在右侧自动带入默认变量并支持即时预览。</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
+            {focusMode !== "risk" && riskTemplateCount > 0 ? (
+              <Button size="sm" variant="outline" onClick={onEnterFocusMode}>
+                <AlertTriangle className="h-3.5 w-3.5" />
+                风险模板 {riskTemplateCount}
+              </Button>
+            ) : null}
             <Select value={templateEnabledFilter} onValueChange={(value) => onTemplateEnabledChange(value ?? "all")}>
               <SelectTrigger className="w-[120px] bg-background/70">
                 <SelectValue placeholder="启用状态" />

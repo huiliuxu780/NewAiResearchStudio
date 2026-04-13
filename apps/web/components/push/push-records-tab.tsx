@@ -25,6 +25,7 @@ export function PushRecordsTab({
   error,
   focusMode = "all",
   isLoading,
+  onEnterFocusMode,
   onClearFocusMode,
   retryingRecordId,
   onRecordStatusChange,
@@ -54,6 +55,7 @@ export function PushRecordsTab({
   error?: Error;
   focusMode?: "all" | "risk";
   isLoading: boolean;
+  onEnterFocusMode?: () => void;
   onClearFocusMode?: () => void;
   retryingRecordId: string | null;
   onRecordStatusChange: (value: string) => void;
@@ -117,6 +119,10 @@ export function PushRecordsTab({
     () => retryableRecords.filter((record) => selectedRecordIds.includes(record.id)).length,
     [retryableRecords, selectedRecordIds]
   );
+  const riskRecordCount = useMemo(
+    () => (data?.items ?? []).filter((record) => record.status === "failed" || record.status === "retrying" || record.status === "pending").length,
+    [data?.items]
+  );
 
   return (
     <Card className="border-border/40 bg-background/50 py-0">
@@ -128,6 +134,12 @@ export function PushRecordsTab({
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
+          {focusMode !== "risk" && riskRecordCount > 0 ? (
+            <Button size="sm" variant="outline" onClick={onEnterFocusMode}>
+              <RefreshCcw className="h-3.5 w-3.5" />
+              发送积压 {riskRecordCount}
+            </Button>
+          ) : null}
           {focusedTaskName && (
             <Button size="sm" variant="outline" onClick={onClearTaskFilter}>
               清除任务聚焦

@@ -19,6 +19,7 @@ export function PushChannelsTab({
   error,
   focusMode = "all",
   isLoading,
+  onEnterFocusMode,
   onClearFocusMode,
   taskOptions,
   togglingChannelId,
@@ -39,6 +40,7 @@ export function PushChannelsTab({
   error?: Error;
   focusMode?: "all" | "risk";
   isLoading: boolean;
+  onEnterFocusMode?: () => void;
   onClearFocusMode?: () => void;
   taskOptions: PushTask[];
   togglingChannelId: string | null;
@@ -88,6 +90,15 @@ export function PushChannelsTab({
     [data?.items, focusMode, usageByChannelId]
   );
 
+  const riskChannelCount = useMemo(
+    () =>
+      (data?.items ?? []).filter((channel) => {
+        const usage = usageByChannelId[channel.id];
+        return !channel.is_enabled && ((usage?.deliveryEnabled ?? 0) > 0 || (usage?.alertEnabled ?? 0) > 0);
+      }).length,
+    [data?.items, usageByChannelId]
+  );
+
   return (
     <Card className="border-border/40 bg-background/50 py-0">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 py-4 md:flex-row md:items-end md:justify-between">
@@ -96,6 +107,12 @@ export function PushChannelsTab({
           <CardDescription>统一查看渠道状态和配置，支持直接启停。</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
+          {focusMode !== "risk" && riskChannelCount > 0 ? (
+            <Button size="sm" variant="outline" onClick={onEnterFocusMode}>
+              <AlertTriangle className="h-3.5 w-3.5" />
+              风险渠道 {riskChannelCount}
+            </Button>
+          ) : null}
           <Select value={channelTypeFilter} onValueChange={(value) => onChannelTypeChange(value ?? "all")}>
             <SelectTrigger className="w-[140px] bg-background/70">
               <SelectValue placeholder="渠道类型" />

@@ -842,6 +842,7 @@ export default function PushPage() {
                 error={channels.error}
                 focusMode={focusMode === "channel-risk" ? "risk" : "all"}
                 isLoading={channels.isLoading}
+                onEnterFocusMode={handleInspectChannelRisk}
                 onClearFocusMode={clearFocusMode}
                 taskOptions={recordFilterTasks.data?.items ?? []}
                 togglingChannelId={togglingChannelId}
@@ -889,6 +890,7 @@ export default function PushPage() {
                 error={tasks.error}
                 focusMode={focusMode === "task-risk" ? "risk" : "all"}
                 isLoading={tasks.isLoading}
+                onEnterFocusMode={handleInspectTaskRisk}
                 onClearFocusMode={clearFocusMode}
                 templateOptions={taskEditorTemplates.data?.items ?? []}
                 updatingTaskId={updatingTaskId}
@@ -946,6 +948,7 @@ export default function PushPage() {
                 error={records.error}
                 focusMode={focusMode === "record-risk" ? "risk" : "all"}
                 isLoading={records.isLoading}
+                onEnterFocusMode={handleInspectRecordRisk}
                 onClearFocusMode={clearFocusMode}
                 retryingRecordId={retryingRecordId}
                 onRecordStatusChange={(value) => {
@@ -1000,6 +1003,7 @@ export default function PushPage() {
                 error={templates.error}
                 focusMode={focusMode === "template-risk" ? "risk" : "all"}
                 isLoading={templates.isLoading}
+                onEnterFocusMode={handleInspectTemplateRisk}
                 onClearFocusMode={clearFocusMode}
                 selectedTemplate={selectedTemplate}
                 taskOptions={recordFilterTasks.data?.items ?? []}

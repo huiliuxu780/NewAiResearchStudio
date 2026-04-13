@@ -21,6 +21,7 @@ export function PushTasksTab({
   error,
   focusMode = "all",
   isLoading,
+  onEnterFocusMode,
   onClearFocusMode,
   templateOptions,
   updatingTaskId,
@@ -47,6 +48,7 @@ export function PushTasksTab({
   error?: Error;
   focusMode?: "all" | "risk";
   isLoading: boolean;
+  onEnterFocusMode?: () => void;
   onClearFocusMode?: () => void;
   templateOptions: PushTemplate[];
   updatingTaskId: string | null;
@@ -122,6 +124,8 @@ export function PushTasksTab({
     );
   }, [channelOptions, data?.items, templateOptions]);
 
+  const riskTaskCount = riskTaskIds.size;
+
   const displayItems = useMemo(
     () => (focusMode === "risk" ? (data?.items ?? []).filter((task) => riskTaskIds.has(task.id)) : (data?.items ?? [])),
     [data?.items, focusMode, riskTaskIds]
@@ -135,6 +139,12 @@ export function PushTasksTab({
           <CardDescription>查看调度状态、快速启停，并支持手动触发验证链路。</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
+          {focusMode !== "risk" && riskTaskCount > 0 ? (
+            <Button size="sm" variant="outline" onClick={onEnterFocusMode}>
+              <AlertTriangle className="h-3.5 w-3.5" />
+              风险任务 {riskTaskCount}
+            </Button>
+          ) : null}
           <Select value={taskTriggerFilter} onValueChange={(value) => onTaskTriggerChange(value ?? "all")}>
             <SelectTrigger className="w-[130px] bg-background/70">
               <SelectValue placeholder="触发方式" />
