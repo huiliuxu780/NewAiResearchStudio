@@ -25,6 +25,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { PushTaskRiskFilter } from "@/lib/push-console-utils";
 import {
   useCreatePushTask,
   useDisablePushTask,
@@ -82,6 +83,7 @@ export default function PushPage() {
   const [taskTriggerFilter, setTaskTriggerFilter] = useState("all");
   const [taskStatusFilter, setTaskStatusFilter] = useState("all");
   const [taskEnabledFilter, setTaskEnabledFilter] = useState("all");
+  const [taskRiskFilter, setTaskRiskFilter] = useState<PushTaskRiskFilter>("all");
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
 
@@ -905,6 +907,7 @@ export default function PushPage() {
                 taskTriggerFilter={taskTriggerFilter}
                 taskStatusFilter={taskStatusFilter}
                 taskEnabledFilter={taskEnabledFilter}
+                taskRiskFilter={taskRiskFilter}
                 data={tasks.data}
                 channelOptions={taskEditorChannels.data?.items ?? []}
                 error={tasks.error}
@@ -925,6 +928,10 @@ export default function PushPage() {
                 }}
                 onTaskEnabledChange={(value) => {
                   setTaskEnabledFilter(value);
+                  setTaskPage(1);
+                }}
+                onTaskRiskChange={(value) => {
+                  setTaskRiskFilter(value);
                   setTaskPage(1);
                 }}
                 onTaskPageChange={setTaskPage}

@@ -4,6 +4,7 @@ import {
   buildChannelDependencyMessage,
   buildTemplateDependencyMessage,
   getRetryableRecords,
+  matchesTaskRiskFilter,
   summarizeChannelDependencies,
   summarizeTaskRisk,
   summarizeTemplateDependencies,
@@ -130,6 +131,30 @@ test("summarizeTaskRisk collects failure, disabled template and disabled channel
   assert.equal(summary.disabledChannelCount, 1);
   assert.equal(summary.disabledTemplate, true);
   assert.deepEqual(summary.reasons, ["累计失败 3 次", "模板已停用", "1 个渠道已停用"]);
+});
+
+test("matchesTaskRiskFilter distinguishes failing and dependency risks", () => {
+  const failureOnly = {
+    hasRisk: true,
+    failureCount: 2,
+    disabledChannelCount: 0,
+    disabledTemplate: false,
+    reasons: ["累计失败 2 次"],
+  };
+  const dependencyOnly = {
+    hasRisk: true,
+    failureCount: 0,
+    disabledChannelCount: 1,
+    disabledTemplate: false,
+    reasons: ["1 个渠道已停用"],
+  };
+
+  assert.equal(matchesTaskRiskFilter(failureOnly, "all"), true);
+  assert.equal(matchesTaskRiskFilter(failureOnly, "risk"), true);
+  assert.equal(matchesTaskRiskFilter(failureOnly, "failing"), true);
+  assert.equal(matchesTaskRiskFilter(failureOnly, "dependency"), false);
+  assert.equal(matchesTaskRiskFilter(dependencyOnly, "failing"), false);
+  assert.equal(matchesTaskRiskFilter(dependencyOnly, "dependency"), true);
 });
 
 test("getRetryableRecords only returns failed records", () => {

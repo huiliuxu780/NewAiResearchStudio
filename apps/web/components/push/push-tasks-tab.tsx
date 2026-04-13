@@ -2,7 +2,7 @@
 
 import { type ElementType, useMemo } from "react";
 import { AlertTriangle, BellRing, Eye, Loader2, Play, Plus, Send, TrendingUp } from "lucide-react";
-import { summarizeTaskRisk } from "@/lib/push-console-utils";
+import { matchesTaskRiskFilter, summarizeTaskRisk, type PushTaskRiskFilter } from "@/lib/push-console-utils";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatPercent, getTriggerTypeLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export function PushTasksTab({
   taskTriggerFilter,
   taskStatusFilter,
   taskEnabledFilter,
+  taskRiskFilter,
   channelOptions,
   data,
   error,
@@ -30,6 +31,7 @@ export function PushTasksTab({
   onTaskTriggerChange,
   onTaskStatusChange,
   onTaskEnabledChange,
+  onTaskRiskChange,
   onTaskPageChange,
   onTaskPageSizeChange,
   onCreateTask,
@@ -44,6 +46,7 @@ export function PushTasksTab({
   taskTriggerFilter: string;
   taskStatusFilter: string;
   taskEnabledFilter: string;
+  taskRiskFilter: PushTaskRiskFilter;
   channelOptions: PushChannel[];
   data?: PaginatedResponse<PushTask>;
   error?: Error;
@@ -57,6 +60,7 @@ export function PushTasksTab({
   onTaskTriggerChange: (value: string) => void;
   onTaskStatusChange: (value: string) => void;
   onTaskEnabledChange: (value: string) => void;
+  onTaskRiskChange: (value: PushTaskRiskFilter) => void;
   onTaskPageChange: (page: number) => void;
   onTaskPageSizeChange: (size: number) => void;
   onCreateTask: () => void;
@@ -127,10 +131,25 @@ export function PushTasksTab({
   }, [data?.items, riskSummaryByTaskId]);
 
   const riskTaskCount = riskTaskIds.size;
+  const failureRiskCount = useMemo(
+    () => (data?.items ?? []).filter((task) => (riskSummaryByTaskId[task.id]?.failureCount ?? 0) > 0).length,
+    [data?.items, riskSummaryByTaskId]
+  );
+  const dependencyRiskCount = useMemo(
+    () =>
+      (data?.items ?? []).filter((task) => {
+        const summary = riskSummaryByTaskId[task.id];
+        return Boolean(summary?.disabledTemplate || (summary?.disabledChannelCount ?? 0) > 0);
+      }).length,
+    [data?.items, riskSummaryByTaskId]
+  );
 
   const displayItems = useMemo(
-    () => (focusMode === "risk" ? (data?.items ?? []).filter((task) => riskTaskIds.has(task.id)) : (data?.items ?? [])),
-    [data?.items, focusMode, riskTaskIds]
+    () =>
+      (focusMode === "risk" ? (data?.items ?? []).filter((task) => riskTaskIds.has(task.id)) : (data?.items ?? [])).filter((task) =>
+        matchesTaskRiskFilter(riskSummaryByTaskId[task.id] ?? { hasRisk: false, failureCount: 0, disabledChannelCount: 0, disabledTemplate: false, reasons: [] }, taskRiskFilter)
+      ),
+    [data?.items, focusMode, riskSummaryByTaskId, riskTaskIds, taskRiskFilter]
   );
 
   return (
@@ -179,6 +198,18 @@ export function PushTasksTab({
               <SelectItem value="all">全部启停</SelectItem>
               <SelectItem value="true">已启用</SelectItem>
               <SelectItem value="false">已停用</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={taskRiskFilter} onValueChange={(value) => onTaskRiskChange((value as PushTaskRiskFilter) ?? "all")}>
+            <SelectTrigger className="w-[150px] bg-background/70">
+              <SelectValue placeholder="风险类型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部任务</SelectItem>
+              <SelectItem value="risk">全部风险 ({riskTaskCount})</SelectItem>
+              <SelectItem value="failing">失败风险 ({failureRiskCount})</SelectItem>
+              <SelectItem value="dependency">依赖风险 ({dependencyRiskCount})</SelectItem>
             </SelectContent>
           </Select>
 

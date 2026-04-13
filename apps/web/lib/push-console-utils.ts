@@ -20,6 +20,8 @@ export interface PushTaskRiskSummary {
   reasons: string[];
 }
 
+export type PushTaskRiskFilter = "all" | "risk" | "failing" | "dependency";
+
 export function summarizeChannelDependencies(channelId: string, tasks: PushTask[]): PushChannelDependencySummary {
   const deliveryTasks = tasks.filter((task) => task.channel_ids.includes(channelId));
   const alertTasks = tasks.filter((task) => task.alert_channel_id === channelId);
@@ -105,6 +107,22 @@ export function summarizeTaskRisk(
     disabledTemplate,
     reasons,
   };
+}
+
+export function matchesTaskRiskFilter(summary: PushTaskRiskSummary, filter: PushTaskRiskFilter) {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === "risk") {
+    return summary.hasRisk;
+  }
+
+  if (filter === "failing") {
+    return summary.failureCount > 0;
+  }
+
+  return summary.disabledTemplate || summary.disabledChannelCount > 0;
 }
 
 export function getRetryableRecords(records: PushRecord[]) {
