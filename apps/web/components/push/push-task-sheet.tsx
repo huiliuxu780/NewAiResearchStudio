@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, Clock3, Filter, Play, Repeat, Send, ShieldAlert } from "lucide-react";
+import { BellRing, Clock3, Copy, Filter, PencilLine, Play, Repeat, Send, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -12,12 +12,16 @@ export function PushTaskSheet({
   task,
   open,
   onOpenChange,
+  onEditTask,
+  onDuplicateTask,
   onInspectRecords,
   onTriggerTask,
 }: {
   task: PushTask | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEditTask?: (task: PushTask) => void;
+  onDuplicateTask?: (task: PushTask) => void;
   onInspectRecords?: (task: PushTask) => void;
   onTriggerTask?: (task: PushTask) => void;
 }) {
@@ -45,6 +49,14 @@ export function PushTaskSheet({
             </div>
 
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => onEditTask?.(task)}>
+                <PencilLine className="h-3.5 w-3.5" />
+                编辑任务
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => onDuplicateTask?.(task)}>
+                <Copy className="h-3.5 w-3.5" />
+                复制任务
+              </Button>
               <Button size="sm" variant="outline" onClick={() => onInspectRecords?.(task)}>
                 <Send className="h-3.5 w-3.5" />
                 查看记录

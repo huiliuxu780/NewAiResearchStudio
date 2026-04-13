@@ -1175,6 +1175,18 @@ export default function PushPage() {
         channel={selectedChannel}
         open={!!selectedChannel}
         onOpenChange={(open) => !open && setSelectedChannel(null)}
+        onEditChannel={(channel) => {
+          setSelectedChannel(null);
+          setChannelDraftSource(null);
+          setEditingChannel(channel);
+          setChannelEditorOpen(true);
+        }}
+        onDuplicateChannel={(channel) => {
+          setSelectedChannel(null);
+          setEditingChannel(null);
+          setChannelDraftSource(channel);
+          setChannelEditorOpen(true);
+        }}
         onInspectRecords={(channel) => {
           setSelectedChannel(null);
           handleInspectChannelRecords(channel);
@@ -1232,6 +1244,18 @@ export default function PushPage() {
         task={selectedTask}
         open={!!selectedTask}
         onOpenChange={(open) => !open && setSelectedTask(null)}
+        onEditTask={(task) => {
+          setSelectedTask(null);
+          setTaskDraftSource(null);
+          setEditingTask(task);
+          setTaskEditorOpen(true);
+        }}
+        onDuplicateTask={(task) => {
+          setSelectedTask(null);
+          setEditingTask(null);
+          setTaskDraftSource(task);
+          setTaskEditorOpen(true);
+        }}
         onInspectRecords={(task) => {
           setSelectedTask(null);
           handleInspectTaskRecords(task);
@@ -1254,6 +1278,18 @@ export default function PushPage() {
         template={detailTemplate}
         open={!!detailTemplate}
         onOpenChange={(open) => !open && setDetailTemplate(null)}
+        onEditTemplate={(template) => {
+          setDetailTemplate(null);
+          setTemplateDraftSource(null);
+          setEditingTemplate(template);
+          setTemplateEditorOpen(true);
+        }}
+        onDuplicateTemplate={(template) => {
+          setDetailTemplate(null);
+          setEditingTemplate(null);
+          setTemplateDraftSource(template);
+          setTemplateEditorOpen(true);
+        }}
         onPreviewTemplate={handleOpenTemplatePreview}
         onInspectRisk={() => {
           setDetailTemplate(null);

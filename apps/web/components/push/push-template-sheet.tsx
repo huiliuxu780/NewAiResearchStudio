@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Braces, FileText, Sparkles, ToggleLeft } from "lucide-react";
+import { AlertTriangle, Braces, Copy, FileText, PencilLine, Sparkles, ToggleLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -12,12 +12,16 @@ export function PushTemplateSheet({
   template,
   open,
   onOpenChange,
+  onEditTemplate,
+  onDuplicateTemplate,
   onPreviewTemplate,
   onInspectRisk,
 }: {
   template: PushTemplate | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEditTemplate?: (template: PushTemplate) => void;
+  onDuplicateTemplate?: (template: PushTemplate) => void;
   onPreviewTemplate?: (template: PushTemplate) => void;
   onInspectRisk?: () => void;
 }) {
@@ -37,6 +41,14 @@ export function PushTemplateSheet({
         <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
           <div className="mt-4 space-y-4">
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => onEditTemplate?.(template)}>
+                <PencilLine className="h-3.5 w-3.5" />
+                编辑模板
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => onDuplicateTemplate?.(template)}>
+                <Copy className="h-3.5 w-3.5" />
+                复制模板
+              </Button>
               <Button size="sm" variant="outline" onClick={() => onPreviewTemplate?.(template)}>
                 <Sparkles className="h-3.5 w-3.5" />
                 查看模板预览

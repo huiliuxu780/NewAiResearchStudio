@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Globe, RadioTower, Search, Settings2, ToggleLeft } from "lucide-react";
+import { AlertTriangle, Copy, Globe, PencilLine, RadioTower, Search, Settings2, ToggleLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -12,12 +12,16 @@ export function PushChannelSheet({
   channel,
   open,
   onOpenChange,
+  onEditChannel,
+  onDuplicateChannel,
   onInspectRecords,
   onInspectRisk,
 }: {
   channel: PushChannel | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEditChannel?: (channel: PushChannel) => void;
+  onDuplicateChannel?: (channel: PushChannel) => void;
   onInspectRecords?: (channel: PushChannel) => void;
   onInspectRisk?: () => void;
 }) {
@@ -37,6 +41,14 @@ export function PushChannelSheet({
         <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
           <div className="mt-4 space-y-4">
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => onEditChannel?.(channel)}>
+                <PencilLine className="h-3.5 w-3.5" />
+                编辑渠道
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => onDuplicateChannel?.(channel)}>
+                <Copy className="h-3.5 w-3.5" />
+                复制渠道
+              </Button>
               <Button size="sm" variant="outline" onClick={() => onInspectRecords?.(channel)}>
                 <Search className="h-3.5 w-3.5" />
                 查看记录
