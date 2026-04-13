@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Loader2, Plus, RadioTower } from "lucide-react";
+import { Copy, Eye, Loader2, Plus, RadioTower } from "lucide-react";
 import { PushSectionEmpty, formatDateTime, getChannelTypeLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ export function PushChannelsTab({
   onChannelPageSizeChange,
   onCreateChannel,
   onEditChannel,
+  onDuplicateChannel,
   onDeleteChannel,
   onViewChannel,
   onToggleChannel,
@@ -40,6 +41,7 @@ export function PushChannelsTab({
   onChannelPageSizeChange: (size: number) => void;
   onCreateChannel: () => void;
   onEditChannel: (channel: PushChannel) => void;
+  onDuplicateChannel: (channel: PushChannel) => void;
   onDeleteChannel: (channel: PushChannel) => void;
   onViewChannel: (channel: PushChannel) => void;
   onToggleChannel: (channel: PushChannel) => void;
@@ -129,6 +131,10 @@ export function PushChannelsTab({
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onEditChannel(channel)}>
                         编辑
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onDuplicateChannel(channel)}>
+                        <Copy className="h-3.5 w-3.5" />
+                        复制
                       </Button>
                       <Button
                         size="sm"

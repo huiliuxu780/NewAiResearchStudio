@@ -105,18 +105,20 @@ const channelConfigGuides: Record<
 
 export function PushChannelEditorSheet({
   channel,
+  initialChannel,
   open,
   onOpenChange,
   onSave,
   isSaving = false,
 }: {
   channel: PushChannel | null;
+  initialChannel?: PushChannel | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: PushChannelCreateData | PushChannelUpdateData) => void;
   isSaving?: boolean;
 }) {
-  const formKey = `${channel?.id ?? "new"}-${open ? "open" : "closed"}`;
+  const formKey = `${channel?.id ?? `copy-${initialChannel?.id ?? "new"}`}-${open ? "open" : "closed"}`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -124,6 +126,7 @@ export function PushChannelEditorSheet({
         <PushChannelEditorForm
           key={formKey}
           channel={channel}
+          initialChannel={initialChannel}
           onOpenChange={onOpenChange}
           onSave={onSave}
           isSaving={isSaving}
@@ -135,21 +138,24 @@ export function PushChannelEditorSheet({
 
 function PushChannelEditorForm({
   channel,
+  initialChannel,
   onOpenChange,
   onSave,
   isSaving,
 }: {
   channel: PushChannel | null;
+  initialChannel?: PushChannel | null;
   onOpenChange: (open: boolean) => void;
   onSave: (data: PushChannelCreateData | PushChannelUpdateData) => void;
   isSaving: boolean;
 }) {
   const isEditing = Boolean(channel);
-  const [name, setName] = useState(channel?.name ?? "");
-  const [channelType, setChannelType] = useState(channel?.channel_type ?? "feishu");
-  const [description, setDescription] = useState(channel?.description ?? "");
-  const [configText, setConfigText] = useState(JSON.stringify(channel?.config ?? {}, null, 2));
-  const [isEnabled, setIsEnabled] = useState(channel?.is_enabled ?? true);
+  const sourceChannel = channel ?? initialChannel ?? null;
+  const [name, setName] = useState(channel?.name ?? (initialChannel ? `${initialChannel.name} - 副本` : ""));
+  const [channelType, setChannelType] = useState(sourceChannel?.channel_type ?? "feishu");
+  const [description, setDescription] = useState(sourceChannel?.description ?? "");
+  const [configText, setConfigText] = useState(JSON.stringify(sourceChannel?.config ?? {}, null, 2));
+  const [isEnabled, setIsEnabled] = useState(sourceChannel?.is_enabled ?? true);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const configGuide = channelConfigGuides[channelType];
 
@@ -193,9 +199,13 @@ function PushChannelEditorForm({
   return (
     <>
       <SheetHeader className="border-b px-6 py-5">
-        <SheetTitle>{isEditing ? "编辑推送渠道" : "新建推送渠道"}</SheetTitle>
+        <SheetTitle>{isEditing ? "编辑推送渠道" : initialChannel ? "复制推送渠道" : "新建推送渠道"}</SheetTitle>
         <SheetDescription>
-          {isEditing ? "更新渠道配置、说明和启用状态。" : "创建新的推送渠道配置，供任务和模板编排使用。"}
+          {isEditing
+            ? "更新渠道配置、说明和启用状态。"
+            : initialChannel
+              ? "基于现有渠道快速生成一份副本，再按接收对象或凭证做微调。"
+              : "创建新的推送渠道配置，供任务和模板编排使用。"}
         </SheetDescription>
       </SheetHeader>
 

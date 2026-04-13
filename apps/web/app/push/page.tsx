@@ -95,6 +95,7 @@ export default function PushPage() {
 
   const [selectedChannel, setSelectedChannel] = useState<PushChannel | null>(null);
   const [editingChannel, setEditingChannel] = useState<PushChannel | null>(null);
+  const [channelDraftSource, setChannelDraftSource] = useState<PushChannel | null>(null);
   const [channelEditorOpen, setChannelEditorOpen] = useState(false);
   const [deletingChannel, setDeletingChannel] = useState<PushChannel | null>(null);
   const [selectedTask, setSelectedTask] = useState<PushTask | null>(null);
@@ -323,6 +324,7 @@ export default function PushPage() {
       await refreshPushData();
       setChannelEditorOpen(false);
       setEditingChannel(null);
+      setChannelDraftSource(null);
     } catch (error) {
       setFlashMessage({ tone: "error", text: getErrorMessage(error, "保存推送渠道失败。") });
     }
@@ -692,10 +694,17 @@ export default function PushPage() {
                 }}
                 onCreateChannel={() => {
                   setEditingChannel(null);
+                  setChannelDraftSource(null);
                   setChannelEditorOpen(true);
                 }}
                 onEditChannel={(channel) => {
+                  setChannelDraftSource(null);
                   setEditingChannel(channel);
+                  setChannelEditorOpen(true);
+                }}
+                onDuplicateChannel={(channel) => {
+                  setEditingChannel(null);
+                  setChannelDraftSource(channel);
                   setChannelEditorOpen(true);
                 }}
                 onDeleteChannel={setDeletingChannel}
@@ -853,11 +862,13 @@ export default function PushPage() {
       <PushChannelSheet channel={selectedChannel} open={!!selectedChannel} onOpenChange={(open) => !open && setSelectedChannel(null)} />
       <PushChannelEditorSheet
         channel={editingChannel}
+        initialChannel={channelDraftSource}
         open={channelEditorOpen}
         onOpenChange={(open) => {
           setChannelEditorOpen(open);
           if (!open) {
             setEditingChannel(null);
+            setChannelDraftSource(null);
           }
         }}
         onSave={(data) => void handleSaveChannel(data)}
