@@ -1,7 +1,9 @@
 "use client";
 
-import { BellRing, Eye, Loader2, Play, Plus, Send } from "lucide-react";
-import { PushSectionEmpty, PushStatusBadge, formatDateTime, getTriggerTypeLabel } from "@/components/push/push-shared";
+import { type ElementType, useMemo } from "react";
+import { AlertTriangle, BellRing, Eye, Loader2, Play, Plus, Send, TrendingUp } from "lucide-react";
+import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatPercent, getTriggerTypeLabel } from "@/components/push/push-shared";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
@@ -55,6 +57,29 @@ export function PushTasksTab({
   onToggleTask: (task: PushTask) => void;
   onTriggerTask: (task: PushTask) => void;
 }) {
+  const summary = useMemo(() => {
+    const initial = {
+      totalTasks: data?.items.length ?? 0,
+      enabledTasks: 0,
+      totalExecutions: 0,
+      successCount: 0,
+      failureCount: 0,
+    };
+
+    return (data?.items ?? []).reduce((acc, task) => {
+      if (task.is_enabled) acc.enabledTasks += 1;
+      acc.totalExecutions += task.total_executions;
+      acc.successCount += task.success_count;
+      acc.failureCount += task.failure_count;
+      return acc;
+    }, initial);
+  }, [data?.items]);
+
+  const successRate =
+    summary.successCount + summary.failureCount > 0
+      ? (summary.successCount / (summary.successCount + summary.failureCount)) * 100
+      : 0;
+
   return (
     <Card className="border-border/40 bg-background/50 py-0">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 py-4 md:flex-row md:items-end md:justify-between">
@@ -114,13 +139,21 @@ export function PushTasksTab({
         </CardContent>
       ) : data?.items.length ? (
         <>
+          <CardContent className="grid gap-3 border-b border-border/50 py-4 md:grid-cols-4">
+            <TaskSummaryCard label="当前页任务" value={summary.totalTasks} tone="slate" icon={BellRing} />
+            <TaskSummaryCard label="已启用" value={summary.enabledTasks} tone="emerald" icon={TrendingUp} />
+            <TaskSummaryCard label="累计执行" value={summary.totalExecutions} tone="sky" icon={Play} />
+            <TaskSummaryCard label="综合成功率" value={formatPercent(successRate)} tone="amber" icon={AlertTriangle} />
+          </CardContent>
+
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>任务名称</TableHead>
                 <TableHead>触发方式</TableHead>
                 <TableHead>渠道数</TableHead>
-                <TableHead>状态</TableHead>
+                <TableHead>执行概览</TableHead>
+                <TableHead>健康度</TableHead>
                 <TableHead>最近执行</TableHead>
                 <TableHead>下次执行</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -137,7 +170,40 @@ export function PushTasksTab({
                   </TableCell>
                   <TableCell>{getTriggerTypeLabel(task.trigger_type)}</TableCell>
                   <TableCell>{task.channel_ids.length}</TableCell>
-                  <TableCell><PushStatusBadge status={task.status} /></TableCell>
+                  <TableCell className="min-w-[180px]">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">{task.total_executions} 次</p>
+                      <p className="text-xs text-muted-foreground">
+                        成功 {task.success_count} / 失败 {task.failure_count}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="min-w-[200px]">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <PushStatusBadge status={task.status} />
+                        <Badge
+                          variant="outline"
+                          className={
+                            task.failure_count > 0
+                              ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                              : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                          }
+                        >
+                          {formatPercent(
+                            task.success_count + task.failure_count > 0
+                              ? (task.success_count / (task.success_count + task.failure_count)) * 100
+                              : 0
+                          )}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {task.failure_count > 0
+                          ? `最近累计失败 ${task.failure_count} 次，建议优先查看记录页。`
+                          : "当前没有累计失败记录。"}
+                      </p>
+                    </div>
+                  </TableCell>
                   <TableCell>{formatDateTime(task.last_executed_at)}</TableCell>
                   <TableCell>{formatDateTime(task.next_scheduled_at)}</TableCell>
                   <TableCell>
@@ -189,5 +255,41 @@ export function PushTasksTab({
         </CardContent>
       )}
     </Card>
+  );
+}
+
+function TaskSummaryCard({
+  label,
+  value,
+  tone,
+  icon: Icon,
+}: {
+  label: string;
+  value: number | string;
+  tone: "slate" | "emerald" | "sky" | "amber";
+  icon: ElementType;
+}) {
+  const badgeClassName =
+    tone === "emerald"
+      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+      : tone === "sky"
+        ? "border-sky-500/20 bg-sky-500/10 text-sky-400"
+        : tone === "amber"
+          ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+          : "border-border bg-muted/30 text-muted-foreground";
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-background/70 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+        <Badge variant="outline" className={badgeClassName}>
+          <Icon className="mr-1 h-3 w-3" />
+          {typeof value === "number" ? value.toLocaleString("zh-CN") : value}
+        </Badge>
+      </div>
+      <p className="mt-3 text-2xl font-semibold text-foreground">
+        {typeof value === "number" ? value.toLocaleString("zh-CN") : value}
+      </p>
+    </div>
   );
 }
