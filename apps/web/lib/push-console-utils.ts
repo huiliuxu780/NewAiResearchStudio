@@ -21,6 +21,7 @@ export interface PushTaskRiskSummary {
 }
 
 export type PushTaskRiskFilter = "all" | "risk" | "failing" | "dependency";
+export type PushRecordDiagnosticFilter = "all" | "retryable" | "error-code" | "retry-exhausted";
 
 export function summarizeChannelDependencies(channelId: string, tasks: PushTask[]): PushChannelDependencySummary {
   const deliveryTasks = tasks.filter((task) => task.channel_ids.includes(channelId));
@@ -123,6 +124,22 @@ export function matchesTaskRiskFilter(summary: PushTaskRiskSummary, filter: Push
   }
 
   return summary.disabledTemplate || summary.disabledChannelCount > 0;
+}
+
+export function matchesRecordDiagnosticFilter(record: PushRecord, filter: PushRecordDiagnosticFilter) {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === "retryable") {
+    return record.status === "failed";
+  }
+
+  if (filter === "error-code") {
+    return Boolean(record.error_code);
+  }
+
+  return record.retry_count >= record.max_retries && record.max_retries > 0;
 }
 
 export function getRetryableRecords(records: PushRecord[]) {

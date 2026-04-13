@@ -4,6 +4,7 @@ import {
   buildChannelDependencyMessage,
   buildTemplateDependencyMessage,
   getRetryableRecords,
+  matchesRecordDiagnosticFilter,
   matchesTaskRiskFilter,
   summarizeChannelDependencies,
   summarizeTaskRisk,
@@ -155,6 +156,18 @@ test("matchesTaskRiskFilter distinguishes failing and dependency risks", () => {
   assert.equal(matchesTaskRiskFilter(failureOnly, "dependency"), false);
   assert.equal(matchesTaskRiskFilter(dependencyOnly, "failing"), false);
   assert.equal(matchesTaskRiskFilter(dependencyOnly, "dependency"), true);
+});
+
+test("matchesRecordDiagnosticFilter distinguishes retryable, error-code and exhausted records", () => {
+  const retryableRecord = { status: "failed", error_code: "FEISHU_500", retry_count: 1, max_retries: 3 };
+  const exhaustedRecord = { status: "failed", error_code: null, retry_count: 3, max_retries: 3 };
+
+  assert.equal(matchesRecordDiagnosticFilter(retryableRecord as never, "all"), true);
+  assert.equal(matchesRecordDiagnosticFilter(retryableRecord as never, "retryable"), true);
+  assert.equal(matchesRecordDiagnosticFilter(retryableRecord as never, "error-code"), true);
+  assert.equal(matchesRecordDiagnosticFilter(retryableRecord as never, "retry-exhausted"), false);
+  assert.equal(matchesRecordDiagnosticFilter(exhaustedRecord as never, "retry-exhausted"), true);
+  assert.equal(matchesRecordDiagnosticFilter(exhaustedRecord as never, "error-code"), false);
 });
 
 test("getRetryableRecords only returns failed records", () => {

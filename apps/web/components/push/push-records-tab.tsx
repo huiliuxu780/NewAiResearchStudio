@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Eye, Loader2, RefreshCcw, Send } from "lucide-react";
-import { getRetryableRecords } from "@/lib/push-console-utils";
+import { getRetryableRecords, matchesRecordDiagnosticFilter, type PushRecordDiagnosticFilter } from "@/lib/push-console-utils";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatDuration, getChannelTypeLabel, getContentFormatLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export function PushRecordsTab({
   recordStatusFilter,
   recordChannelFilter,
   recordChannelIdFilter,
+  recordDiagnosticFilter,
   taskOptions,
   channelOptions,
   selectedTaskId,
@@ -31,6 +32,7 @@ export function PushRecordsTab({
   onRecordStatusChange,
   onRecordChannelChange,
   onRecordChannelIdChange,
+  onRecordDiagnosticChange,
   onRecordTaskChange,
   onClearTaskFilter,
   onRecordPageChange,
@@ -50,6 +52,7 @@ export function PushRecordsTab({
   recordStatusFilter: string;
   recordChannelFilter: string;
   recordChannelIdFilter: string;
+  recordDiagnosticFilter: PushRecordDiagnosticFilter;
   taskOptions: PushTask[];
   channelOptions: PushChannel[];
   selectedTaskId?: string | null;
@@ -64,6 +67,7 @@ export function PushRecordsTab({
   onRecordStatusChange: (value: string) => void;
   onRecordChannelChange: (value: string) => void;
   onRecordChannelIdChange: (value: string) => void;
+  onRecordDiagnosticChange: (value: PushRecordDiagnosticFilter) => void;
   onRecordTaskChange: (value: string) => void;
   onClearTaskFilter: () => void;
   onRecordPageChange: (page: number) => void;
@@ -100,10 +104,11 @@ export function PushRecordsTab({
 
   const displayItems = useMemo(
     () =>
-      focusMode === "risk"
+      (focusMode === "risk"
         ? (data?.items ?? []).filter((record) => record.status === "failed" || record.status === "retrying" || record.status === "pending")
-        : (data?.items ?? []),
-    [data?.items, focusMode]
+        : (data?.items ?? [])
+      ).filter((record) => matchesRecordDiagnosticFilter(record, recordDiagnosticFilter)),
+    [data?.items, focusMode, recordDiagnosticFilter]
   );
 
   const summary = useMemo(() => {
@@ -127,6 +132,14 @@ export function PushRecordsTab({
   );
   const riskRecordCount = useMemo(
     () => (data?.items ?? []).filter((record) => record.status === "failed" || record.status === "retrying" || record.status === "pending").length,
+    [data?.items]
+  );
+  const diagnosticCounts = useMemo(
+    () => ({
+      retryable: (data?.items ?? []).filter((record) => matchesRecordDiagnosticFilter(record, "retryable")).length,
+      errorCode: (data?.items ?? []).filter((record) => matchesRecordDiagnosticFilter(record, "error-code")).length,
+      retryExhausted: (data?.items ?? []).filter((record) => matchesRecordDiagnosticFilter(record, "retry-exhausted")).length,
+    }),
     [data?.items]
   );
 
@@ -189,6 +202,18 @@ export function PushRecordsTab({
                   {channel.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={recordDiagnosticFilter} onValueChange={(value) => onRecordDiagnosticChange((value as PushRecordDiagnosticFilter) ?? "all")}>
+            <SelectTrigger className="w-[170px] bg-background/70">
+              <SelectValue placeholder="诊断视图" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部结果</SelectItem>
+              <SelectItem value="retryable">可重试 ({diagnosticCounts.retryable})</SelectItem>
+              <SelectItem value="error-code">有错误码 ({diagnosticCounts.errorCode})</SelectItem>
+              <SelectItem value="retry-exhausted">重试耗尽 ({diagnosticCounts.retryExhausted})</SelectItem>
             </SelectContent>
           </Select>
 

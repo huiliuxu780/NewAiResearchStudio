@@ -25,7 +25,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { PushTaskRiskFilter } from "@/lib/push-console-utils";
+import type { PushRecordDiagnosticFilter, PushTaskRiskFilter } from "@/lib/push-console-utils";
 import {
   useCreatePushTask,
   useDisablePushTask,
@@ -90,6 +90,7 @@ export default function PushPage() {
   const [recordStatusFilter, setRecordStatusFilter] = useState("all");
   const [recordChannelFilter, setRecordChannelFilter] = useState("all");
   const [recordChannelIdFilter, setRecordChannelIdFilter] = useState("all");
+  const [recordDiagnosticFilter, setRecordDiagnosticFilter] = useState<PushRecordDiagnosticFilter>("all");
   const [recordTaskFocus, setRecordTaskFocus] = useState<{ id: string; name: string } | null>(null);
   const [recordPage, setRecordPage] = useState(1);
   const [recordPageSize, setRecordPageSize] = useState(10);
@@ -967,6 +968,7 @@ export default function PushPage() {
                 recordStatusFilter={recordStatusFilter}
                 recordChannelFilter={recordChannelFilter}
                 recordChannelIdFilter={recordChannelIdFilter}
+                recordDiagnosticFilter={recordDiagnosticFilter}
                 taskOptions={recordFilterTasks.data?.items ?? []}
                 channelOptions={recordFilterChannels.data?.items ?? []}
                 selectedTaskId={recordTaskFocus?.id ?? null}
@@ -989,6 +991,11 @@ export default function PushPage() {
                 }}
                 onRecordChannelIdChange={(value) => {
                   setRecordChannelIdFilter(value);
+                  setRecordPage(1);
+                }}
+                onRecordDiagnosticChange={(value) => {
+                  setRecordDiagnosticFilter(value);
+                  setSelectedRecordIds([]);
                   setRecordPage(1);
                 }}
                 onRecordTaskChange={(value) => {
