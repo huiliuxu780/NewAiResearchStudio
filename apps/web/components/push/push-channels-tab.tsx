@@ -1,6 +1,7 @@
 "use client";
 
-import { Copy, Eye, Loader2, Plus, RadioTower } from "lucide-react";
+import { type ElementType, useMemo } from "react";
+import { AlertTriangle, Copy, Eye, Loader2, Plus, RadioTower } from "lucide-react";
 import { PushSectionEmpty, formatDateTime, getChannelTypeLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { PaginatedResponse } from "@/lib/api";
-import type { PushChannel } from "@/types/push";
+import type { PushChannel, PushTask } from "@/types/push";
 
 export function PushChannelsTab({
   channelTypeFilter,
@@ -17,6 +18,7 @@ export function PushChannelsTab({
   data,
   error,
   isLoading,
+  taskOptions,
   togglingChannelId,
   onChannelTypeChange,
   onChannelEnabledChange,
@@ -34,6 +36,7 @@ export function PushChannelsTab({
   data?: PaginatedResponse<PushChannel>;
   error?: Error;
   isLoading: boolean;
+  taskOptions: PushTask[];
   togglingChannelId: string | null;
   onChannelTypeChange: (value: string) => void;
   onChannelEnabledChange: (value: string) => void;
@@ -46,6 +49,30 @@ export function PushChannelsTab({
   onViewChannel: (channel: PushChannel) => void;
   onToggleChannel: (channel: PushChannel) => void;
 }) {
+  const usageByChannelId = useMemo(
+    () =>
+      taskOptions.reduce<
+        Record<string, { deliveryTotal: number; deliveryEnabled: number; alertTotal: number; alertEnabled: number }>
+      >((acc, task) => {
+        task.channel_ids.forEach((channelId) => {
+          const current = acc[channelId] ?? { deliveryTotal: 0, deliveryEnabled: 0, alertTotal: 0, alertEnabled: 0 };
+          current.deliveryTotal += 1;
+          if (task.is_enabled) current.deliveryEnabled += 1;
+          acc[channelId] = current;
+        });
+
+        if (task.alert_channel_id) {
+          const current = acc[task.alert_channel_id] ?? { deliveryTotal: 0, deliveryEnabled: 0, alertTotal: 0, alertEnabled: 0 };
+          current.alertTotal += 1;
+          if (task.is_enabled && task.alert_on_failure) current.alertEnabled += 1;
+          acc[task.alert_channel_id] = current;
+        }
+
+        return acc;
+      }, {}),
+    [taskOptions]
+  );
+
   return (
     <Card className="border-border/40 bg-background/50 py-0">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 py-4 md:flex-row md:items-end md:justify-between">
@@ -100,7 +127,7 @@ export function PushChannelsTab({
               <TableRow>
                 <TableHead>渠道名称</TableHead>
                 <TableHead>类型</TableHead>
-                <TableHead>描述</TableHead>
+                <TableHead>引用情况</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>更新时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -109,10 +136,15 @@ export function PushChannelsTab({
             <TableBody>
               {data.items.map((channel) => (
                 <TableRow key={channel.id}>
-                  <TableCell className="font-medium text-foreground">{channel.name}</TableCell>
+                  <TableCell className="max-w-[240px] whitespace-normal">
+                    <div className="space-y-1">
+                      <p className="font-medium text-foreground">{channel.name}</p>
+                      <p className="text-xs text-muted-foreground">{channel.description || "暂无描述"}</p>
+                    </div>
+                  </TableCell>
                   <TableCell>{getChannelTypeLabel(channel.channel_type)}</TableCell>
-                  <TableCell className="max-w-[280px] whitespace-normal text-muted-foreground">
-                    {channel.description || "暂无描述"}
+                  <TableCell className="min-w-[240px] max-w-[300px] whitespace-normal">
+                    <ChannelUsageCell channel={channel} usage={usageByChannelId[channel.id]} />
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -170,5 +202,59 @@ export function PushChannelsTab({
         </CardContent>
       )}
     </Card>
+  );
+}
+
+function ChannelUsageCell({
+  channel,
+  usage,
+}: {
+  channel: PushChannel;
+  usage?: { deliveryTotal: number; deliveryEnabled: number; alertTotal: number; alertEnabled: number };
+}) {
+  const deliveryTotal = usage?.deliveryTotal ?? 0;
+  const deliveryEnabled = usage?.deliveryEnabled ?? 0;
+  const alertTotal = usage?.alertTotal ?? 0;
+  const alertEnabled = usage?.alertEnabled ?? 0;
+  const hasRisk = !channel.is_enabled && (deliveryEnabled > 0 || alertEnabled > 0);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        <UsageBadge icon={RadioTower} label={`发送 ${deliveryTotal}`} tone={deliveryEnabled > 0 ? "sky" : "slate"} />
+        <UsageBadge icon={AlertTriangle} label={`告警 ${alertTotal}`} tone={alertEnabled > 0 ? "amber" : "slate"} />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {hasRisk
+          ? `当前有 ${deliveryEnabled + alertEnabled} 个启用任务仍依赖这个已停用渠道。`
+          : deliveryTotal || alertTotal
+            ? `启用任务引用 ${deliveryEnabled} 个发送链路，${alertEnabled} 个失败告警链路。`
+            : "当前没有任务引用这个渠道。"}
+      </p>
+    </div>
+  );
+}
+
+function UsageBadge({
+  icon: Icon,
+  label,
+  tone,
+}: {
+  icon: ElementType;
+  label: string;
+  tone: "slate" | "sky" | "amber";
+}) {
+  const className =
+    tone === "sky"
+      ? "border-sky-500/20 bg-sky-500/10 text-sky-400"
+      : tone === "amber"
+        ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+        : "border-border bg-background/60 text-muted-foreground";
+
+  return (
+    <Badge variant="outline" className={className}>
+      <Icon className="mr-1 h-3 w-3" />
+      {label}
+    </Badge>
   );
 }

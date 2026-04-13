@@ -1,6 +1,7 @@
 "use client";
 
-import { Eye, FileText, Loader2, Sparkles } from "lucide-react";
+import { useMemo } from "react";
+import { AlertTriangle, Eye, FileText, Loader2, Sparkles } from "lucide-react";
 import { PushSectionEmpty, getChannelTypeLabel, getContentFormatLabel } from "@/components/push/push-shared";
 import { PushTemplatePreviewPanel } from "@/components/push/push-template-preview-panel";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { PaginatedResponse } from "@/lib/api";
-import type { PushTemplate, PushTemplatePreview } from "@/types/push";
+import type { PushTask, PushTemplate, PushTemplatePreview } from "@/types/push";
 
 export function PushTemplatesTab({
   templateEnabledFilter,
@@ -18,6 +19,7 @@ export function PushTemplatesTab({
   error,
   isLoading,
   selectedTemplate,
+  taskOptions,
   previewVariablesText,
   previewResult,
   previewError,
@@ -39,6 +41,7 @@ export function PushTemplatesTab({
   error?: Error;
   isLoading: boolean;
   selectedTemplate: PushTemplate | null;
+  taskOptions: PushTask[];
   previewVariablesText: string;
   previewResult: PushTemplatePreview | null;
   previewError: string | null;
@@ -55,6 +58,19 @@ export function PushTemplatesTab({
   onPreviewVariablesTextChange: (value: string) => void;
   onPreview: () => void;
 }) {
+  const usageByTemplateId = useMemo(
+    () =>
+      taskOptions.reduce<Record<string, { total: number; enabled: number }>>((acc, task) => {
+        if (!task.template_id) return acc;
+        const current = acc[task.template_id] ?? { total: 0, enabled: 0 };
+        current.total += 1;
+        if (task.is_enabled) current.enabled += 1;
+        acc[task.template_id] = current;
+        return acc;
+      }, {}),
+    [taskOptions]
+  );
+
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_380px]">
       <Card className="border-border/40 bg-background/50 py-0">
@@ -95,6 +111,7 @@ export function PushTemplatesTab({
                 <TableRow>
                   <TableHead>模板名称</TableHead>
                   <TableHead>适用渠道</TableHead>
+                  <TableHead>引用情况</TableHead>
                   <TableHead>格式</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="text-right">操作</TableHead>
@@ -111,6 +128,9 @@ export function PushTemplatesTab({
                     </TableCell>
                     <TableCell className="max-w-[220px] whitespace-normal text-muted-foreground">
                       {template.channel_types.map(getChannelTypeLabel).join("、")}
+                    </TableCell>
+                    <TableCell className="min-w-[220px] max-w-[280px] whitespace-normal">
+                      <TemplateUsageCell template={template} usage={usageByTemplateId[template.id]} />
                     </TableCell>
                     <TableCell>{getContentFormatLabel(template.content_format)}</TableCell>
                     <TableCell>
@@ -174,6 +194,49 @@ export function PushTemplatesTab({
         onPreviewVariablesTextChange={onPreviewVariablesTextChange}
         onPreview={onPreview}
       />
+    </div>
+  );
+}
+
+function TemplateUsageCell({
+  template,
+  usage,
+}: {
+  template: PushTemplate;
+  usage?: { total: number; enabled: number };
+}) {
+  const total = usage?.total ?? 0;
+  const enabled = usage?.enabled ?? 0;
+  const hasRisk = !template.is_enabled && enabled > 0;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        <Badge
+          variant="outline"
+          className={enabled > 0 ? "border-sky-500/20 bg-sky-500/10 text-sky-400" : "border-border bg-background/60 text-muted-foreground"}
+        >
+          任务 {total}
+        </Badge>
+        {template.is_system && (
+          <Badge variant="outline" className="border-violet-500/20 bg-violet-500/10 text-violet-400">
+            系统模板
+          </Badge>
+        )}
+        {hasRisk && (
+          <Badge variant="outline" className="border-amber-500/20 bg-amber-500/10 text-amber-400">
+            <AlertTriangle className="mr-1 h-3 w-3" />
+            风险
+          </Badge>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {hasRisk
+          ? `当前有 ${enabled} 个启用任务仍依赖这个已停用模板。`
+          : total
+            ? `共被 ${total} 个任务引用，其中 ${enabled} 个任务处于启用状态。`
+            : "当前还没有任务引用这个模板。"}
+      </p>
     </div>
   );
 }

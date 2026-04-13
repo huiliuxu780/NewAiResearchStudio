@@ -678,6 +678,7 @@ export default function PushPage() {
                 data={channels.data}
                 error={channels.error}
                 isLoading={channels.isLoading}
+                taskOptions={recordFilterTasks.data?.items ?? []}
                 togglingChannelId={togglingChannelId}
                 onChannelTypeChange={(value) => {
                   setChannelTypeFilter(value);
@@ -820,6 +821,7 @@ export default function PushPage() {
                 error={templates.error}
                 isLoading={templates.isLoading}
                 selectedTemplate={selectedTemplate}
+                taskOptions={recordFilterTasks.data?.items ?? []}
                 previewVariablesText={previewVariablesText}
                 previewResult={previewResult}
                 previewError={previewError}
