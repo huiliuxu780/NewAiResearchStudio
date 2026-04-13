@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Eye, Loader2, RefreshCcw, Send } from "lucide-react";
+import { getRetryableRecords } from "@/lib/push-console-utils";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatDuration, getChannelTypeLabel, getContentFormatLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,13 @@ export function PushRecordsTab({
   onRecordPageChange,
   onRecordPageSizeChange,
   onViewRecord,
+  selectedRecordIds,
+  onToggleRecordSelection,
+  onSelectRetryableRecords,
+  onClearRecordSelection,
   onRetryRecord,
+  onRetrySelectedRecords,
+  isBatchRetrying,
 }: {
   recordStatusFilter: string;
   recordChannelFilter: string;
@@ -57,7 +64,13 @@ export function PushRecordsTab({
   onRecordPageChange: (page: number) => void;
   onRecordPageSizeChange: (size: number) => void;
   onViewRecord: (record: PushRecord) => void;
+  selectedRecordIds: string[];
+  onToggleRecordSelection: (recordId: string, checked: boolean) => void;
+  onSelectRetryableRecords: (recordIds: string[]) => void;
+  onClearRecordSelection: () => void;
   onRetryRecord: (record: PushRecord) => void;
+  onRetrySelectedRecords: () => void;
+  isBatchRetrying: boolean;
 }) {
   const taskNameById = useMemo(
     () =>
@@ -98,6 +111,12 @@ export function PushRecordsTab({
 
     return counts;
   }, [displayItems]);
+
+  const retryableRecords = useMemo(() => getRetryableRecords(displayItems), [displayItems]);
+  const selectedRetryableCount = useMemo(
+    () => retryableRecords.filter((record) => selectedRecordIds.includes(record.id)).length,
+    [retryableRecords, selectedRecordIds]
+  );
 
   return (
     <Card className="border-border/40 bg-background/50 py-0">
@@ -199,9 +218,38 @@ export function PushRecordsTab({
             <RecordSummaryCard label="重试与待处理" value={summary.retrying + summary.pending} tone="amber" />
           </CardContent>
 
+          {retryableRecords.length ? (
+            <CardContent className="flex flex-col gap-3 border-b border-border/50 py-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">批量处置</p>
+                <p className="text-xs text-muted-foreground">
+                  当前页共有 {retryableRecords.length} 条失败记录可重试，已选 {selectedRetryableCount} 条。
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onSelectRetryableRecords(retryableRecords.map((record) => record.id))}
+                  disabled={isBatchRetrying}
+                >
+                  选中本页失败项
+                </Button>
+                <Button size="sm" variant="ghost" onClick={onClearRecordSelection} disabled={!selectedRetryableCount || isBatchRetrying}>
+                  清空选择
+                </Button>
+                <Button size="sm" variant="secondary" onClick={onRetrySelectedRecords} disabled={!selectedRetryableCount || isBatchRetrying}>
+                  {isBatchRetrying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+                  批量重试
+                </Button>
+              </div>
+            </CardContent>
+          ) : null}
+
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-14">选择</TableHead>
                 <TableHead>推送标题</TableHead>
                 <TableHead>渠道</TableHead>
                 <TableHead>状态</TableHead>
@@ -214,6 +262,18 @@ export function PushRecordsTab({
             <TableBody>
               {displayItems.map((record) => (
                 <TableRow key={record.id}>
+                  <TableCell>
+                    <label className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 cursor-pointer rounded border-border bg-background accent-foreground disabled:cursor-not-allowed"
+                        checked={selectedRecordIds.includes(record.id)}
+                        disabled={record.status !== "failed" || isBatchRetrying}
+                        onChange={(event) => onToggleRecordSelection(record.id, event.target.checked)}
+                        aria-label={`选择记录 ${record.title}`}
+                      />
+                    </label>
+                  </TableCell>
                   <TableCell className="max-w-[280px] whitespace-normal">
                     <div className="space-y-1">
                       <p className="font-medium text-foreground">{record.title}</p>
@@ -251,7 +311,12 @@ export function PushRecordsTab({
                         <Eye className="h-3.5 w-3.5" />
                         查看
                       </Button>
-                      <Button size="sm" variant="secondary" disabled={retryingRecordId === record.id || record.status === "success"} onClick={() => onRetryRecord(record)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={retryingRecordId === record.id || isBatchRetrying || record.status !== "failed"}
+                        onClick={() => onRetryRecord(record)}
+                      >
                         {retryingRecordId === record.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
                         重试
                       </Button>

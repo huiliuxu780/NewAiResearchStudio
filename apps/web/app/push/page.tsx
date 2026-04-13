@@ -47,6 +47,7 @@ import {
   useUpdatePushTemplate,
   useUpdatePushChannel,
 } from "@/hooks/use-push";
+import { buildChannelDependencyMessage, buildTemplateDependencyMessage, getRetryableRecords } from "@/lib/push-console-utils";
 import type {
   PushChannel,
   PushChannelCreateData,
@@ -108,11 +109,21 @@ export default function PushPage() {
   const [triggerTaskDraft, setTriggerTaskDraft] = useState<PushTask | null>(null);
   const [taskTriggerSheetOpen, setTaskTriggerSheetOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PushRecord | null>(null);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
   const [detailTemplate, setDetailTemplate] = useState<PushTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<PushTemplate | null>(null);
   const [templateDraftSource, setTemplateDraftSource] = useState<PushTemplate | null>(null);
   const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<PushTemplate | null>(null);
+  const [channelDisableConfirmation, setChannelDisableConfirmation] = useState<{
+    channel: PushChannel;
+    mode: "toggle" | "save";
+    data?: PushChannelUpdateData;
+  } | null>(null);
+  const [templateDisableConfirmation, setTemplateDisableConfirmation] = useState<{
+    template: PushTemplate;
+    data: PushTemplateUpdateData;
+  } | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<PushTemplate | null>(null);
   const [previewVariablesText, setPreviewVariablesText] = useState("{}");
   const [previewResult, setPreviewResult] = useState<PushTemplatePreview | null>(null);
@@ -123,6 +134,7 @@ export default function PushPage() {
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [triggeringTaskId, setTriggeringTaskId] = useState<string | null>(null);
   const [retryingRecordId, setRetryingRecordId] = useState<string | null>(null);
+  const [batchRetryingRecords, setBatchRetryingRecords] = useState(false);
   const [previewingTemplateId, setPreviewingTemplateId] = useState<string | null>(null);
 
   const channelQuery = useMemo<PushChannelsFilter>(
@@ -180,6 +192,12 @@ export default function PushPage() {
     channel_type: recordChannelFilter !== "all" ? recordChannelFilter : undefined,
   });
   const taskEditorTemplates = usePushTemplates({ page: 1, page_size: 100 });
+  const dependencyTasks = useMemo(() => recordFilterTasks.data?.items ?? [], [recordFilterTasks.data?.items]);
+  const currentRecordItems = useMemo(() => records.data?.items ?? [], [records.data?.items]);
+  const selectedRetryableRecords = useMemo(
+    () => getRetryableRecords(currentRecordItems).filter((record) => selectedRecordIds.includes(record.id)),
+    [currentRecordItems, selectedRecordIds]
+  );
 
   const updateChannelMutation = useUpdatePushChannel();
   const createChannelMutation = useCreatePushChannel();
@@ -260,6 +278,11 @@ export default function PushPage() {
     }
   }, [recordChannelIdFilter, recordFilterChannels.data?.items]);
 
+  useEffect(() => {
+    const recordIds = new Set(currentRecordItems.map((record) => record.id));
+    setSelectedRecordIds((current) => current.filter((id) => recordIds.has(id)));
+  }, [currentRecordItems]);
+
   async function refreshPushData() {
     await Promise.all([
       mutate(["push-stats", 30]),
@@ -281,20 +304,20 @@ export default function PushPage() {
     ]);
   }
 
-  async function handleToggleChannel(channel: PushChannel) {
+  async function performToggleChannel(channel: PushChannel, nextEnabled: boolean) {
     setFlashMessage(null);
     setTogglingChannelId(channel.id);
 
     try {
       await updateChannelMutation.trigger({
         id: channel.id,
-        data: { is_enabled: !channel.is_enabled },
+        data: { is_enabled: nextEnabled },
       });
 
       await refreshPushData();
       setFlashMessage({
         tone: "success",
-        text: `${channel.name} 已${channel.is_enabled ? "停用" : "启用"}。`,
+        text: `${channel.name} 已${nextEnabled ? "启用" : "停用"}。`,
       });
     } catch (error) {
       setFlashMessage({
@@ -306,7 +329,19 @@ export default function PushPage() {
     }
   }
 
-  async function handleSaveChannel(data: PushChannelCreateData | PushChannelUpdateData) {
+  async function handleToggleChannel(channel: PushChannel) {
+    if (channel.is_enabled) {
+      setChannelDisableConfirmation({
+        channel,
+        mode: "toggle",
+      });
+      return;
+    }
+
+    await performToggleChannel(channel, true);
+  }
+
+  async function persistChannel(data: PushChannelCreateData | PushChannelUpdateData) {
     setFlashMessage(null);
 
     try {
@@ -329,6 +364,35 @@ export default function PushPage() {
       setChannelDraftSource(null);
     } catch (error) {
       setFlashMessage({ tone: "error", text: getErrorMessage(error, "保存推送渠道失败。") });
+    }
+  }
+
+  async function handleSaveChannel(data: PushChannelCreateData | PushChannelUpdateData) {
+    if (editingChannel && editingChannel.is_enabled && "is_enabled" in data && data.is_enabled === false) {
+      setChannelDisableConfirmation({
+        channel: editingChannel,
+        mode: "save",
+        data,
+      });
+      return;
+    }
+
+    await persistChannel(data);
+  }
+
+  async function handleConfirmChannelDisable() {
+    if (!channelDisableConfirmation) return;
+
+    const { channel, mode, data } = channelDisableConfirmation;
+    setChannelDisableConfirmation(null);
+
+    if (mode === "toggle") {
+      await performToggleChannel(channel, false);
+      return;
+    }
+
+    if (data) {
+      await persistChannel(data);
     }
   }
 
@@ -519,6 +583,33 @@ export default function PushPage() {
     }
   }
 
+  async function handleBatchRetryRecords() {
+    if (!selectedRetryableRecords.length) return;
+
+    setFlashMessage(null);
+    setBatchRetryingRecords(true);
+
+    try {
+      for (const record of selectedRetryableRecords) {
+        await retryRecordMutation.trigger({ id: record.id });
+      }
+
+      await refreshPushData();
+      setSelectedRecordIds([]);
+      setFlashMessage({
+        tone: "success",
+        text: `已将 ${selectedRetryableRecords.length} 条失败记录重新送入重试流程。`,
+      });
+    } catch (error) {
+      setFlashMessage({
+        tone: "error",
+        text: getErrorMessage(error, "批量重试失败，请稍后再试。"),
+      });
+    } finally {
+      setBatchRetryingRecords(false);
+    }
+  }
+
   async function handlePreviewTemplate(template: PushTemplate, nextVariablesText?: string) {
     setPreviewError(null);
     setPreviewingTemplateId(template.id);
@@ -547,7 +638,7 @@ export default function PushPage() {
     setAutoPreviewedTemplateId(null);
   }
 
-  async function handleSaveTemplate(data: PushTemplateCreateData | PushTemplateUpdateData) {
+  async function persistTemplate(data: PushTemplateCreateData | PushTemplateUpdateData) {
     setFlashMessage(null);
 
     try {
@@ -571,6 +662,26 @@ export default function PushPage() {
     } catch (error) {
       setFlashMessage({ tone: "error", text: getErrorMessage(error, "保存推送模板失败。") });
     }
+  }
+
+  async function handleSaveTemplate(data: PushTemplateCreateData | PushTemplateUpdateData) {
+    if (editingTemplate && editingTemplate.is_enabled && "is_enabled" in data && data.is_enabled === false) {
+      setTemplateDisableConfirmation({
+        template: editingTemplate,
+        data,
+      });
+      return;
+    }
+
+    await persistTemplate(data);
+  }
+
+  async function handleConfirmTemplateDisable() {
+    if (!templateDisableConfirmation) return;
+
+    const { data } = templateDisableConfirmation;
+    setTemplateDisableConfirmation(null);
+    await persistTemplate(data);
   }
 
   async function handleDeleteTemplate() {
@@ -868,7 +979,17 @@ export default function PushPage() {
                   setRecordPage(1);
                 }}
                 onViewRecord={setSelectedRecord}
+                selectedRecordIds={selectedRecordIds}
+                onToggleRecordSelection={(recordId, checked) =>
+                  setSelectedRecordIds((current) =>
+                    checked ? [...new Set([...current, recordId])] : current.filter((id) => id !== recordId)
+                  )
+                }
+                onSelectRetryableRecords={(recordIds) => setSelectedRecordIds(recordIds)}
+                onClearRecordSelection={() => setSelectedRecordIds([])}
                 onRetryRecord={(record) => void handleRetryRecord(record)}
+                onRetrySelectedRecords={() => void handleBatchRetryRecords()}
+                isBatchRetrying={batchRetryingRecords}
               />
             </TabsContent>
 
@@ -986,6 +1107,25 @@ export default function PushPage() {
         isSaving={createTemplateMutation.isMutating || updateTemplateMutation.isMutating}
       />
       <ConfirmDialog
+        open={!!templateDisableConfirmation}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTemplateDisableConfirmation(null);
+          }
+        }}
+        title={templateDisableConfirmation ? `停用模板「${templateDisableConfirmation.template.name}」` : "停用推送模板"}
+        description={
+          templateDisableConfirmation
+            ? buildTemplateDependencyMessage(templateDisableConfirmation.template, dependencyTasks, "disable")
+            : "停用后，相关任务将无法继续使用该模板。"
+        }
+        confirmText="继续停用"
+        cancelText="取消"
+        variant="default"
+        onConfirm={() => void handleConfirmTemplateDisable()}
+        loading={updateTemplateMutation.isMutating}
+      />
+      <ConfirmDialog
         open={!!deletingTemplate}
         onOpenChange={(open) => {
           if (!open) {
@@ -993,12 +1133,35 @@ export default function PushPage() {
           }
         }}
         title="删除推送模板"
-        description={`确定要删除模板“${deletingTemplate?.name}”吗？此操作不可撤销。`}
+        description={
+          deletingTemplate
+            ? buildTemplateDependencyMessage(deletingTemplate, dependencyTasks, "delete")
+            : "确定要删除当前模板吗？此操作不可撤销。"
+        }
         confirmText="删除"
         cancelText="取消"
         variant="destructive"
         onConfirm={() => void handleDeleteTemplate()}
         loading={deleteTemplateMutation.isMutating}
+      />
+      <ConfirmDialog
+        open={!!channelDisableConfirmation}
+        onOpenChange={(open) => {
+          if (!open) {
+            setChannelDisableConfirmation(null);
+          }
+        }}
+        title={channelDisableConfirmation ? `停用渠道「${channelDisableConfirmation.channel.name}」` : "停用推送渠道"}
+        description={
+          channelDisableConfirmation
+            ? buildChannelDependencyMessage(channelDisableConfirmation.channel, dependencyTasks, "disable")
+            : "停用后将不会继续通过该渠道发送。"
+        }
+        confirmText={channelDisableConfirmation?.mode === "save" ? "继续保存" : "继续停用"}
+        cancelText="取消"
+        variant="default"
+        onConfirm={() => void handleConfirmChannelDisable()}
+        loading={updateChannelMutation.isMutating}
       />
       <ConfirmDialog
         open={!!deletingChannel}
@@ -1008,7 +1171,11 @@ export default function PushPage() {
           }
         }}
         title="删除推送渠道"
-        description={`确定要删除渠道“${deletingChannel?.name}”吗？如果仍有任务引用该渠道，后端可能会拒绝删除。`}
+        description={
+          deletingChannel
+            ? buildChannelDependencyMessage(deletingChannel, dependencyTasks, "delete")
+            : "确定要删除当前渠道吗？此操作不可撤销。"
+        }
         confirmText="删除"
         cancelText="取消"
         variant="destructive"
