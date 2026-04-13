@@ -1,6 +1,7 @@
 "use client";
 
-import { Braces, FileText, ToggleLeft } from "lucide-react";
+import { AlertTriangle, Braces, FileText, Sparkles, ToggleLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,10 +12,14 @@ export function PushTemplateSheet({
   template,
   open,
   onOpenChange,
+  onPreviewTemplate,
+  onInspectRisk,
 }: {
   template: PushTemplate | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPreviewTemplate?: (template: PushTemplate) => void;
+  onInspectRisk?: () => void;
 }) {
   if (!template) return null;
 
@@ -31,6 +36,19 @@ export function PushTemplateSheet({
 
         <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
           <div className="mt-4 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => onPreviewTemplate?.(template)}>
+                <Sparkles className="h-3.5 w-3.5" />
+                查看模板预览
+              </Button>
+              {!template.is_enabled && (
+                <Button size="sm" variant="secondary" onClick={() => onInspectRisk?.()}>
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  查看依赖风险
+                </Button>
+              )}
+            </div>
+
             <PushDetailRow icon={FileText} label="模板名称" value={template.name} />
             <PushDetailRow icon={ToggleLeft} label="启用状态" value={template.is_enabled ? "已启用" : "已停用"} />
             <PushDetailRow icon={ToggleLeft} label="系统模板" value={template.is_system ? "是" : "否"} />

@@ -800,6 +800,13 @@ export default function PushPage() {
     setActiveTab("templates");
   }
 
+  function handleOpenTemplatePreview(template: PushTemplate) {
+    setFocusMode("none");
+    setDetailTemplate(null);
+    handleSelectTemplate(template);
+    setActiveTab("templates");
+  }
+
   function handleInspectRecordRisk(filter: PushRecordDiagnosticFilter = "all") {
     setFocusMode("record-risk");
     setRecordStatusFilter("all");
@@ -1212,7 +1219,16 @@ export default function PushPage() {
         onRetryRecord={(record) => void handleRetryRecord(record)}
         retrying={Boolean(selectedRecord && retryingRecordId === selectedRecord.id)}
       />
-      <PushTemplateSheet template={detailTemplate} open={!!detailTemplate} onOpenChange={(open) => !open && setDetailTemplate(null)} />
+      <PushTemplateSheet
+        template={detailTemplate}
+        open={!!detailTemplate}
+        onOpenChange={(open) => !open && setDetailTemplate(null)}
+        onPreviewTemplate={handleOpenTemplatePreview}
+        onInspectRisk={() => {
+          setDetailTemplate(null);
+          handleInspectTemplateRisk();
+        }}
+      />
       <PushTemplateEditorSheet
         template={editingTemplate}
         initialTemplate={templateDraftSource}
