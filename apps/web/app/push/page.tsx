@@ -70,6 +70,7 @@ import type {
 export default function PushPage() {
   const { mutate } = useSWRConfig();
   const [activeTab, setActiveTab] = useState("channels");
+  const [focusMode, setFocusMode] = useState<"none" | "task-risk" | "channel-risk" | "template-risk" | "record-risk">("none");
   const [flashMessage, setFlashMessage] = useState<PushFlashMessage | null>(null);
 
   const [channelTypeFilter, setChannelTypeFilter] = useState("all");
@@ -596,22 +597,41 @@ export default function PushPage() {
   }
 
   function handleInspectChannelRisk() {
+    setFocusMode("channel-risk");
     setChannelEnabledFilter("false");
     setChannelPage(1);
+    setChannelPageSize(100);
     setActiveTab("channels");
   }
 
+  function handleInspectTaskRisk() {
+    setFocusMode("task-risk");
+    setTaskEnabledFilter("true");
+    setTaskPage(1);
+    setTaskPageSize(100);
+    setActiveTab("tasks");
+  }
+
   function handleInspectTemplateRisk() {
+    setFocusMode("template-risk");
     setTemplateEnabledFilter("false");
     setTemplatePage(1);
+    setTemplatePageSize(100);
     setActiveTab("templates");
   }
 
   function handleInspectRecordRisk() {
+    setFocusMode("record-risk");
     setRecordStatusFilter("failed");
     setRecordTaskFocus(null);
+    setRecordChannelFilter("all");
+    setRecordChannelIdFilter("all");
     setRecordPage(1);
     setActiveTab("records");
+  }
+
+  function clearFocusMode() {
+    setFocusMode("none");
   }
 
   return (
@@ -666,6 +686,7 @@ export default function PushPage() {
         tasks={recordFilterTasks.data?.items ?? []}
         templates={taskEditorTemplates.data?.items ?? []}
         onInspectChannelRisk={handleInspectChannelRisk}
+        onInspectTaskRisk={handleInspectTaskRisk}
         onInspectRecordRisk={handleInspectRecordRisk}
         onInspectTemplateRisk={handleInspectTemplateRisk}
       />
@@ -707,7 +728,9 @@ export default function PushPage() {
                 channelEnabledFilter={channelEnabledFilter}
                 data={channels.data}
                 error={channels.error}
+                focusMode={focusMode === "channel-risk" ? "risk" : "all"}
                 isLoading={channels.isLoading}
+                onClearFocusMode={clearFocusMode}
                 taskOptions={recordFilterTasks.data?.items ?? []}
                 togglingChannelId={togglingChannelId}
                 onChannelTypeChange={(value) => {
@@ -752,7 +775,9 @@ export default function PushPage() {
                 data={tasks.data}
                 channelOptions={taskEditorChannels.data?.items ?? []}
                 error={tasks.error}
+                focusMode={focusMode === "task-risk" ? "risk" : "all"}
                 isLoading={tasks.isLoading}
+                onClearFocusMode={clearFocusMode}
                 templateOptions={taskEditorTemplates.data?.items ?? []}
                 updatingTaskId={updatingTaskId}
                 triggeringTaskId={triggeringTaskId}
@@ -849,7 +874,9 @@ export default function PushPage() {
                 templateEnabledFilter={templateEnabledFilter}
                 data={templates.data}
                 error={templates.error}
+                focusMode={focusMode === "template-risk" ? "risk" : "all"}
                 isLoading={templates.isLoading}
+                onClearFocusMode={clearFocusMode}
                 selectedTemplate={selectedTemplate}
                 taskOptions={recordFilterTasks.data?.items ?? []}
                 previewVariablesText={previewVariablesText}

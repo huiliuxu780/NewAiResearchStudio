@@ -17,7 +17,9 @@ export function PushTemplatesTab({
   templateEnabledFilter,
   data,
   error,
+  focusMode = "all",
   isLoading,
+  onClearFocusMode,
   selectedTemplate,
   taskOptions,
   previewVariablesText,
@@ -39,7 +41,9 @@ export function PushTemplatesTab({
   templateEnabledFilter: string;
   data?: PaginatedResponse<PushTemplate>;
   error?: Error;
+  focusMode?: "all" | "risk";
   isLoading: boolean;
+  onClearFocusMode?: () => void;
   selectedTemplate: PushTemplate | null;
   taskOptions: PushTask[];
   previewVariablesText: string;
@@ -71,6 +75,14 @@ export function PushTemplatesTab({
     [taskOptions]
   );
 
+  const displayItems = useMemo(
+    () =>
+      focusMode === "risk"
+        ? (data?.items ?? []).filter((template) => !template.is_enabled && (usageByTemplateId[template.id]?.enabled ?? 0) > 0)
+        : (data?.items ?? []),
+    [data?.items, focusMode, usageByTemplateId]
+  );
+
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_380px]">
       <Card className="border-border/40 bg-background/50 py-0">
@@ -97,6 +109,18 @@ export function PushTemplatesTab({
           </div>
         </CardHeader>
 
+        {focusMode === "risk" && (
+          <CardContent className="flex flex-col gap-3 border-b border-border/50 py-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">专注视图：模板依赖风险</p>
+              <p className="text-xs text-muted-foreground">仅显示当前结果里仍被启用任务绑定的停用模板。</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onClearFocusMode}>
+              退出专注视图
+            </Button>
+          </CardContent>
+        )}
+
         {error ? (
           <CardContent className="py-8 text-sm text-destructive">{error.message}</CardContent>
         ) : isLoading ? (
@@ -118,7 +142,7 @@ export function PushTemplatesTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.items.map((template) => (
+                {displayItems.map((template) => (
                   <TableRow key={template.id} data-state={selectedTemplate?.id === template.id ? "selected" : undefined}>
                     <TableCell className="max-w-[260px] whitespace-normal">
                       <div className="space-y-1">
@@ -180,7 +204,11 @@ export function PushTemplatesTab({
           </>
         ) : (
           <CardContent className="pt-4">
-            <PushSectionEmpty icon={FileText} title="暂无模板" description="当前筛选条件下未返回模板，可先放开筛选查看完整模板库。" />
+            <PushSectionEmpty
+              icon={FileText}
+              title={focusMode === "risk" ? "当前结果里没有模板依赖风险" : "暂无模板"}
+              description={focusMode === "risk" ? "可以退出专注视图，或扩大筛选范围后再看一轮。" : "当前筛选条件下未返回模板，可先放开筛选查看完整模板库。"}
+            />
           </CardContent>
         )}
       </Card>

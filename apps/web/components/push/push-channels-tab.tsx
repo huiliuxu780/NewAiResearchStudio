@@ -17,7 +17,9 @@ export function PushChannelsTab({
   channelEnabledFilter,
   data,
   error,
+  focusMode = "all",
   isLoading,
+  onClearFocusMode,
   taskOptions,
   togglingChannelId,
   onChannelTypeChange,
@@ -35,7 +37,9 @@ export function PushChannelsTab({
   channelEnabledFilter: string;
   data?: PaginatedResponse<PushChannel>;
   error?: Error;
+  focusMode?: "all" | "risk";
   isLoading: boolean;
+  onClearFocusMode?: () => void;
   taskOptions: PushTask[];
   togglingChannelId: string | null;
   onChannelTypeChange: (value: string) => void;
@@ -71,6 +75,17 @@ export function PushChannelsTab({
         return acc;
       }, {}),
     [taskOptions]
+  );
+
+  const displayItems = useMemo(
+    () =>
+      focusMode === "risk"
+        ? (data?.items ?? []).filter((channel) => {
+            const usage = usageByChannelId[channel.id];
+            return !channel.is_enabled && ((usage?.deliveryEnabled ?? 0) > 0 || (usage?.alertEnabled ?? 0) > 0);
+          })
+        : (data?.items ?? []),
+    [data?.items, focusMode, usageByChannelId]
   );
 
   return (
@@ -113,6 +128,18 @@ export function PushChannelsTab({
         </div>
       </CardHeader>
 
+      {focusMode === "risk" && (
+        <CardContent className="flex flex-col gap-3 border-b border-border/50 py-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">专注视图：渠道依赖风险</p>
+            <p className="text-xs text-muted-foreground">仅显示当前结果里仍被启用任务依赖的停用渠道。</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={onClearFocusMode}>
+            退出专注视图
+          </Button>
+        </CardContent>
+      )}
+
       {error ? (
         <CardContent className="py-8 text-sm text-destructive">{error.message}</CardContent>
       ) : isLoading ? (
@@ -134,7 +161,7 @@ export function PushChannelsTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.items.map((channel) => (
+              {displayItems.map((channel) => (
                 <TableRow key={channel.id}>
                   <TableCell className="max-w-[240px] whitespace-normal">
                     <div className="space-y-1">
@@ -198,7 +225,11 @@ export function PushChannelsTab({
         </>
       ) : (
         <CardContent className="pt-4">
-          <PushSectionEmpty icon={RadioTower} title="暂无可用渠道" description="试试切换筛选条件，或先在后端补充渠道配置。" />
+          <PushSectionEmpty
+            icon={RadioTower}
+            title={focusMode === "risk" ? "当前结果里没有渠道依赖风险" : "暂无可用渠道"}
+            description={focusMode === "risk" ? "可以退出专注视图，或扩大筛选范围后再检查。" : "试试切换筛选条件，或先在后端补充渠道配置。"}
+          />
         </CardContent>
       )}
     </Card>

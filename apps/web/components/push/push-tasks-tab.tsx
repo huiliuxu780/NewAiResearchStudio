@@ -19,7 +19,9 @@ export function PushTasksTab({
   channelOptions,
   data,
   error,
+  focusMode = "all",
   isLoading,
+  onClearFocusMode,
   templateOptions,
   updatingTaskId,
   triggeringTaskId,
@@ -43,7 +45,9 @@ export function PushTasksTab({
   channelOptions: PushChannel[];
   data?: PaginatedResponse<PushTask>;
   error?: Error;
+  focusMode?: "all" | "risk";
   isLoading: boolean;
+  onClearFocusMode?: () => void;
   templateOptions: PushTemplate[];
   updatingTaskId: string | null;
   triggeringTaskId: string | null;
@@ -102,6 +106,27 @@ export function PushTasksTab({
     [templateOptions]
   );
 
+  const riskTaskIds = useMemo(() => {
+    const disabledChannelIds = new Set(channelOptions.filter((channel) => !channel.is_enabled).map((channel) => channel.id));
+    const disabledTemplateIds = new Set(templateOptions.filter((template) => !template.is_enabled).map((template) => template.id));
+
+    return new Set(
+      (data?.items ?? [])
+        .filter(
+          (task) =>
+            task.failure_count > 0 ||
+            (task.template_id ? disabledTemplateIds.has(task.template_id) : false) ||
+            task.channel_ids.some((channelId) => disabledChannelIds.has(channelId))
+        )
+        .map((task) => task.id)
+    );
+  }, [channelOptions, data?.items, templateOptions]);
+
+  const displayItems = useMemo(
+    () => (focusMode === "risk" ? (data?.items ?? []).filter((task) => riskTaskIds.has(task.id)) : (data?.items ?? [])),
+    [data?.items, focusMode, riskTaskIds]
+  );
+
   return (
     <Card className="border-border/40 bg-background/50 py-0">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 py-4 md:flex-row md:items-end md:justify-between">
@@ -152,6 +177,18 @@ export function PushTasksTab({
         </div>
       </CardHeader>
 
+      {focusMode === "risk" && (
+        <CardContent className="flex flex-col gap-3 border-b border-border/50 py-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">专注视图：风险任务</p>
+            <p className="text-xs text-muted-foreground">仅显示当前已加载结果里需要优先介入的任务。</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={onClearFocusMode}>
+            退出专注视图
+          </Button>
+        </CardContent>
+      )}
+
       {error ? (
         <CardContent className="py-8 text-sm text-destructive">{error.message}</CardContent>
       ) : isLoading ? (
@@ -182,7 +219,7 @@ export function PushTasksTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.items.map((task) => (
+              {displayItems.map((task) => (
                 <TableRow key={task.id}>
                   <TableCell className="max-w-[260px] whitespace-normal">
                     <div className="space-y-1">
@@ -275,7 +312,11 @@ export function PushTasksTab({
         </>
       ) : (
         <CardContent className="pt-4">
-          <PushSectionEmpty icon={BellRing} title="暂无任务数据" description="当前筛选条件下没有推送任务，可切换条件后重试。" />
+          <PushSectionEmpty
+            icon={BellRing}
+            title={focusMode === "risk" ? "当前结果里没有风险任务" : "暂无任务数据"}
+            description={focusMode === "risk" ? "可以退出专注视图，或扩大筛选范围后再看一轮。" : "当前筛选条件下没有推送任务，可切换条件后重试。"}
+          />
         </CardContent>
       )}
     </Card>

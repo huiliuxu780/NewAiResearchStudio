@@ -13,6 +13,7 @@ export function PushRiskRadar({
   tasks,
   templates,
   onInspectChannelRisk,
+  onInspectTaskRisk,
   onInspectRecordRisk,
   onInspectTemplateRisk,
 }: {
@@ -21,6 +22,7 @@ export function PushRiskRadar({
   tasks: PushTask[];
   templates: PushTemplate[];
   onInspectChannelRisk: () => void;
+  onInspectTaskRisk: () => void;
   onInspectRecordRisk: () => void;
   onInspectTemplateRisk: () => void;
 }) {
@@ -59,6 +61,18 @@ export function PushRiskRadar({
   }, [tasks, templates]);
 
   const recordRiskCount = (stats?.summary.failed_count ?? 0) + (stats?.summary.retrying_count ?? 0);
+  const taskRisk = useMemo(() => {
+    const disabledChannelIds = new Set(channels.filter((channel) => !channel.is_enabled).map((channel) => channel.id));
+    const disabledTemplateIds = new Set(templates.filter((template) => !template.is_enabled).map((template) => template.id));
+
+    return tasks.filter(
+      (task) =>
+        task.is_enabled &&
+        (task.failure_count > 0 ||
+          (task.template_id ? disabledTemplateIds.has(task.template_id) : false) ||
+          task.channel_ids.some((channelId) => disabledChannelIds.has(channelId)))
+    );
+  }, [channels, tasks, templates]);
 
   return (
     <Card className="border-border/40 bg-background/60">
@@ -72,7 +86,22 @@ export function PushRiskRadar({
         </Badge>
       </CardHeader>
 
-      <CardContent className="grid gap-4 pt-4 xl:grid-cols-3">
+      <CardContent className="grid gap-4 pt-4 xl:grid-cols-2 2xl:grid-cols-4">
+        <RiskCard
+          icon={BellRing}
+          title="风险任务"
+          count={taskRisk.length}
+          accentClassName="border-rose-500/20 bg-rose-500/10 text-rose-400"
+          description={
+            taskRisk.length
+              ? `这些启用任务包含失败记录或依赖停用资源。`
+              : "当前没有需要优先介入的高风险任务。"
+          }
+          examples={taskRisk.map((task) => task.name)}
+          actionLabel="查看风险任务"
+          onAction={onInspectTaskRisk}
+        />
+
         <RiskCard
           icon={RadioTower}
           title="渠道依赖风险"
