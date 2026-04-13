@@ -20,6 +20,18 @@ export interface PushTaskRiskSummary {
   reasons: string[];
 }
 
+export interface PushRetryableSelectionSummary {
+  retryableCount: number;
+  taskIds: string[];
+  channelIds: string[];
+  errorCodes: string[];
+}
+
+export interface PushRecordErrorCodeOption {
+  value: string;
+  count: number;
+}
+
 export type PushTaskRiskFilter = "all" | "risk" | "failing" | "dependency";
 export type PushRecordDiagnosticFilter = "all" | "retryable" | "error-code" | "retry-exhausted";
 
@@ -61,6 +73,11 @@ export function buildChannelDependencyMessage(channel: PushChannel, tasks: PushT
     : `渠道“${channel.name}”仍被 ${enabledImpactCount} 个启用任务依赖，例如：${examples}。继续停用后，这些任务的发送或告警链路会受影响。`;
 }
 
+export function hasEnabledChannelDependencies(channel: PushChannel, tasks: PushTask[]) {
+  const summary = summarizeChannelDependencies(channel.id, tasks);
+  return summary.enabledDeliveryTaskNames.length + summary.enabledAlertTaskNames.length > 0;
+}
+
 export function buildTemplateDependencyMessage(template: PushTemplate, tasks: PushTask[], action: "disable" | "delete") {
   const summary = summarizeTemplateDependencies(template.id, tasks);
   const enabledImpactCount = summary.enabledTaskNames.length;
@@ -76,6 +93,11 @@ export function buildTemplateDependencyMessage(template: PushTemplate, tasks: Pu
   return action === "delete"
     ? `模板“${template.name}”仍被 ${enabledImpactCount} 个启用任务使用，例如：${examples}。继续删除后，这些任务的发送链路会受影响。`
     : `模板“${template.name}”仍被 ${enabledImpactCount} 个启用任务使用，例如：${examples}。继续停用后，这些任务的发送链路会受影响。`;
+}
+
+export function hasEnabledTemplateDependencies(template: PushTemplate, tasks: PushTask[]) {
+  const summary = summarizeTemplateDependencies(template.id, tasks);
+  return summary.enabledTaskNames.length > 0;
 }
 
 export function summarizeTaskRisk(
@@ -144,4 +166,30 @@ export function matchesRecordDiagnosticFilter(record: PushRecord, filter: PushRe
 
 export function getRetryableRecords(records: PushRecord[]) {
   return records.filter((record) => record.status === "failed");
+}
+
+export function getRecordErrorCodeOptions(records: PushRecord[]): PushRecordErrorCodeOption[] {
+  const counts = records.reduce<Map<string, number>>((acc, record) => {
+    if (!record.error_code) {
+      return acc;
+    }
+
+    acc.set(record.error_code, (acc.get(record.error_code) ?? 0) + 1);
+    return acc;
+  }, new Map());
+
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((left, right) => right.count - left.count || left.value.localeCompare(right.value));
+}
+
+export function summarizeRetryableSelection(records: PushRecord[]): PushRetryableSelectionSummary {
+  const retryableRecords = getRetryableRecords(records);
+
+  return {
+    retryableCount: retryableRecords.length,
+    taskIds: [...new Set(retryableRecords.map((record) => record.task_id))],
+    channelIds: [...new Set(retryableRecords.map((record) => record.channel_id))],
+    errorCodes: [...new Set(retryableRecords.map((record) => record.error_code).filter((value): value is string => Boolean(value)))],
+  };
 }

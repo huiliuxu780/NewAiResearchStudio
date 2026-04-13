@@ -2,7 +2,13 @@
 
 import { useMemo } from "react";
 import { Eye, Loader2, RefreshCcw, Send } from "lucide-react";
-import { getRetryableRecords, matchesRecordDiagnosticFilter, type PushRecordDiagnosticFilter } from "@/lib/push-console-utils";
+import {
+  getRecordErrorCodeOptions,
+  getRetryableRecords,
+  matchesRecordDiagnosticFilter,
+  summarizeRetryableSelection,
+  type PushRecordDiagnosticFilter,
+} from "@/lib/push-console-utils";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatDuration, getChannelTypeLabel, getContentFormatLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +23,7 @@ export function PushRecordsTab({
   recordStatusFilter,
   recordChannelFilter,
   recordChannelIdFilter,
+  recordErrorCodeFilter,
   recordDiagnosticFilter,
   taskOptions,
   channelOptions,
@@ -32,6 +39,7 @@ export function PushRecordsTab({
   onRecordStatusChange,
   onRecordChannelChange,
   onRecordChannelIdChange,
+  onRecordErrorCodeChange,
   onRecordDiagnosticChange,
   onRecordTaskChange,
   onClearTaskFilter,
@@ -41,10 +49,16 @@ export function PushRecordsTab({
   selectedRecordIds,
   selectedRecordTaskCount,
   selectedRecordTaskName,
+  selectedRecordChannelCount,
+  selectedRecordChannelName,
+  selectedRecordErrorCodeCount,
+  selectedRecordErrorCode,
   onToggleRecordSelection,
   onSelectRetryableRecords,
   onClearRecordSelection,
   onFocusSelectedTask,
+  onFocusSelectedChannel,
+  onInspectSelectedErrorCode,
   onRetryRecord,
   onRetrySelectedRecords,
   isBatchRetrying,
@@ -52,6 +66,7 @@ export function PushRecordsTab({
   recordStatusFilter: string;
   recordChannelFilter: string;
   recordChannelIdFilter: string;
+  recordErrorCodeFilter: string;
   recordDiagnosticFilter: PushRecordDiagnosticFilter;
   taskOptions: PushTask[];
   channelOptions: PushChannel[];
@@ -67,6 +82,7 @@ export function PushRecordsTab({
   onRecordStatusChange: (value: string) => void;
   onRecordChannelChange: (value: string) => void;
   onRecordChannelIdChange: (value: string) => void;
+  onRecordErrorCodeChange: (value: string) => void;
   onRecordDiagnosticChange: (value: PushRecordDiagnosticFilter) => void;
   onRecordTaskChange: (value: string) => void;
   onClearTaskFilter: () => void;
@@ -76,10 +92,16 @@ export function PushRecordsTab({
   selectedRecordIds: string[];
   selectedRecordTaskCount: number;
   selectedRecordTaskName?: string | null;
+  selectedRecordChannelCount: number;
+  selectedRecordChannelName?: string | null;
+  selectedRecordErrorCodeCount: number;
+  selectedRecordErrorCode?: string | null;
   onToggleRecordSelection: (recordId: string, checked: boolean) => void;
   onSelectRetryableRecords: (recordIds: string[]) => void;
   onClearRecordSelection: () => void;
   onFocusSelectedTask?: () => void;
+  onFocusSelectedChannel?: () => void;
+  onInspectSelectedErrorCode?: () => void;
   onRetryRecord: (record: PushRecord) => void;
   onRetrySelectedRecords: () => void;
   isBatchRetrying: boolean;
@@ -102,13 +124,16 @@ export function PushRecordsTab({
     [channelOptions]
   );
 
+  const errorCodeOptions = useMemo(() => getRecordErrorCodeOptions(data?.items ?? []), [data?.items]);
+
   const displayItems = useMemo(
     () =>
       (focusMode === "risk"
         ? (data?.items ?? []).filter((record) => record.status === "failed" || record.status === "retrying" || record.status === "pending")
         : (data?.items ?? [])
-      ).filter((record) => matchesRecordDiagnosticFilter(record, recordDiagnosticFilter)),
-    [data?.items, focusMode, recordDiagnosticFilter]
+      ).filter((record) => matchesRecordDiagnosticFilter(record, recordDiagnosticFilter))
+        .filter((record) => (recordErrorCodeFilter === "all" ? true : record.error_code === recordErrorCodeFilter)),
+    [data?.items, focusMode, recordDiagnosticFilter, recordErrorCodeFilter]
   );
 
   const summary = useMemo(() => {
@@ -126,6 +151,11 @@ export function PushRecordsTab({
   }, [displayItems]);
 
   const retryableRecords = useMemo(() => getRetryableRecords(displayItems), [displayItems]);
+  const selectedRetryableRecords = useMemo(
+    () => retryableRecords.filter((record) => selectedRecordIds.includes(record.id)),
+    [retryableRecords, selectedRecordIds]
+  );
+  const retryableSelection = useMemo(() => summarizeRetryableSelection(selectedRetryableRecords), [selectedRetryableRecords]);
   const selectedRetryableCount = useMemo(
     () => retryableRecords.filter((record) => selectedRecordIds.includes(record.id)).length,
     [retryableRecords, selectedRecordIds]
@@ -205,6 +235,20 @@ export function PushRecordsTab({
             </SelectContent>
           </Select>
 
+          <Select value={recordErrorCodeFilter} onValueChange={(value) => onRecordErrorCodeChange(value ?? "all")}>
+            <SelectTrigger className="w-[180px] bg-background/70">
+              <SelectValue placeholder="错误码" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部错误码</SelectItem>
+              {errorCodeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.value} ({option.count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={recordDiagnosticFilter} onValueChange={(value) => onRecordDiagnosticChange((value as PushRecordDiagnosticFilter) ?? "all")}>
             <SelectTrigger className="w-[170px] bg-background/70">
               <SelectValue placeholder="诊断视图" />
@@ -269,12 +313,34 @@ export function PushRecordsTab({
                   当前页共有 {retryableRecords.length} 条失败记录可重试，已选 {selectedRetryableCount} 条。
                 </p>
                 {selectedRetryableCount ? (
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline" className="border-border bg-background/70 text-muted-foreground">
+                      任务 {retryableSelection.taskIds.length}
+                    </Badge>
+                    <Badge variant="outline" className="border-border bg-background/70 text-muted-foreground">
+                      渠道 {retryableSelection.channelIds.length}
+                    </Badge>
+                    <Badge variant="outline" className="border-border bg-background/70 text-muted-foreground">
+                      错误码 {retryableSelection.errorCodes.length || 0}
+                    </Badge>
+                  </div>
+                ) : null}
+                {selectedRetryableCount ? (
                   <p className="text-xs text-muted-foreground">
                     {selectedRecordTaskCount === 1 && selectedRecordTaskName
                       ? `所选记录全部来自任务「${selectedRecordTaskName}」，可以直接聚焦排查。`
                       : selectedRecordTaskCount > 1
                         ? `所选记录涉及 ${selectedRecordTaskCount} 个任务，先收敛到单一任务会更容易定位。`
                         : "当前未形成可聚焦的任务上下文。"}
+                  </p>
+                ) : null}
+                {selectedRetryableCount ? (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedRecordChannelCount === 1 && selectedRecordChannelName
+                      ? `当前失败集中在渠道「${selectedRecordChannelName}」。`
+                      : selectedRecordErrorCodeCount === 1 && selectedRecordErrorCode
+                        ? `当前失败集中在错误码「${selectedRecordErrorCode}」。`
+                        : "如果能把选择收敛到单一渠道或错误码，定位会更快。"}
                   </p>
                 ) : null}
               </div>
@@ -297,6 +363,22 @@ export function PushRecordsTab({
                   disabled={selectedRecordTaskCount !== 1 || !selectedRetryableCount || isBatchRetrying}
                 >
                   {selectedRecordTaskCount === 1 && selectedRecordTaskName ? `聚焦任务：${selectedRecordTaskName}` : "按任务聚焦"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onFocusSelectedChannel}
+                  disabled={selectedRecordChannelCount !== 1 || !selectedRetryableCount || isBatchRetrying}
+                >
+                  {selectedRecordChannelCount === 1 && selectedRecordChannelName ? `同渠道诊断：${selectedRecordChannelName}` : "按渠道诊断"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onInspectSelectedErrorCode}
+                  disabled={selectedRecordErrorCodeCount !== 1 || !selectedRetryableCount || isBatchRetrying}
+                >
+                  {selectedRecordErrorCodeCount === 1 && selectedRecordErrorCode ? `错误码：${selectedRecordErrorCode}` : "按错误码诊断"}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={onRetrySelectedRecords} disabled={!selectedRetryableCount || isBatchRetrying}>
                   {isBatchRetrying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}

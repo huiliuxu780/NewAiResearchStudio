@@ -49,7 +49,14 @@ import {
   useUpdatePushTemplate,
   useUpdatePushChannel,
 } from "@/hooks/use-push";
-import { buildChannelDependencyMessage, buildTemplateDependencyMessage, getRetryableRecords } from "@/lib/push-console-utils";
+import {
+  buildChannelDependencyMessage,
+  buildTemplateDependencyMessage,
+  getRetryableRecords,
+  hasEnabledChannelDependencies,
+  hasEnabledTemplateDependencies,
+  summarizeRetryableSelection,
+} from "@/lib/push-console-utils";
 import type {
   PushChannel,
   PushChannelCreateData,
@@ -91,6 +98,7 @@ export default function PushPage() {
   const [recordStatusFilter, setRecordStatusFilter] = useState("all");
   const [recordChannelFilter, setRecordChannelFilter] = useState("all");
   const [recordChannelIdFilter, setRecordChannelIdFilter] = useState("all");
+  const [recordErrorCodeFilter, setRecordErrorCodeFilter] = useState("all");
   const [recordDiagnosticFilter, setRecordDiagnosticFilter] = useState<PushRecordDiagnosticFilter>("all");
   const [recordTaskFocus, setRecordTaskFocus] = useState<{ id: string; name: string } | null>(null);
   const [recordPage, setRecordPage] = useState(1);
@@ -202,10 +210,11 @@ export default function PushPage() {
     () => getRetryableRecords(currentRecordItems).filter((record) => selectedRecordIds.includes(record.id)),
     [currentRecordItems, selectedRecordIds]
   );
-  const selectedRetryableTaskIds = useMemo(
-    () => [...new Set(selectedRetryableRecords.map((record) => record.task_id))],
+  const selectedRetryableSelection = useMemo(
+    () => summarizeRetryableSelection(selectedRetryableRecords),
     [selectedRetryableRecords]
   );
+  const selectedRetryableTaskIds = selectedRetryableSelection.taskIds;
   const selectedRetryableTaskName = useMemo(() => {
     if (selectedRetryableTaskIds.length !== 1) {
       return null;
@@ -213,6 +222,24 @@ export default function PushPage() {
 
     return dependencyTasks.find((task) => task.id === selectedRetryableTaskIds[0])?.name ?? null;
   }, [dependencyTasks, selectedRetryableTaskIds]);
+  const selectedRetryableChannelIds = selectedRetryableSelection.channelIds;
+  const selectedRetryableChannelName = useMemo(() => {
+    if (selectedRetryableChannelIds.length !== 1) {
+      return null;
+    }
+
+    return recordFilterChannels.data?.items?.find((channel) => channel.id === selectedRetryableChannelIds[0])?.name ?? null;
+  }, [recordFilterChannels.data?.items, selectedRetryableChannelIds]);
+  const selectedRetryableErrorCodes = selectedRetryableSelection.errorCodes;
+  const selectedRetryableErrorCode = selectedRetryableErrorCodes.length === 1 ? selectedRetryableErrorCodes[0] : null;
+  const channelDeleteBlocked = useMemo(
+    () => (deletingChannel ? hasEnabledChannelDependencies(deletingChannel, dependencyTasks) : false),
+    [deletingChannel, dependencyTasks]
+  );
+  const templateDeleteBlocked = useMemo(
+    () => (deletingTemplate ? hasEnabledTemplateDependencies(deletingTemplate, dependencyTasks) : false),
+    [deletingTemplate, dependencyTasks]
+  );
 
   const updateChannelMutation = useUpdatePushChannel();
   const createChannelMutation = useCreatePushChannel();
@@ -510,6 +537,7 @@ export default function PushPage() {
     setFocusMode("none");
     setRecordTaskFocus({ id: task.id, name: task.name });
     setRecordDiagnosticFilter("all");
+    setRecordErrorCodeFilter("all");
     setRecordChannelFilter("all");
     setRecordChannelIdFilter("all");
     setRecordPage(1);
@@ -521,6 +549,7 @@ export default function PushPage() {
     setRecordTaskFocus(null);
     setRecordDiagnosticFilter("all");
     setRecordStatusFilter("all");
+    setRecordErrorCodeFilter("all");
     setRecordChannelFilter(channel.channel_type);
     setRecordChannelIdFilter(channel.id);
     setRecordPage(1);
@@ -646,8 +675,53 @@ export default function PushPage() {
 
     const taskId = selectedRetryableTaskIds[0];
     const taskName = selectedRetryableTaskName ?? dependencyTasks.find((task) => task.id === taskId)?.name ?? "关联任务";
+    setFocusMode("none");
+    setSelectedRecord(null);
+    setRecordStatusFilter("all");
+    setRecordErrorCodeFilter("all");
+    setRecordChannelFilter("all");
+    setRecordChannelIdFilter("all");
+    setRecordDiagnosticFilter("all");
     setRecordTaskFocus({ id: taskId, name: taskName });
     setRecordPage(1);
+    setRecordPageSize(100);
+    setActiveTab("records");
+  }
+
+  function handleFocusSelectedRecordChannel() {
+    if (selectedRetryableChannelIds.length !== 1) return;
+
+    const channelId = selectedRetryableChannelIds[0];
+    const linkedChannel = (recordFilterChannels.data?.items ?? []).find((channel) => channel.id === channelId);
+    const nextChannelType = linkedChannel?.channel_type ?? selectedRetryableRecords[0]?.channel_type ?? "all";
+
+    setFocusMode("none");
+    setSelectedRecord(null);
+    setRecordTaskFocus(null);
+    setRecordStatusFilter("all");
+    setRecordDiagnosticFilter("all");
+    setRecordErrorCodeFilter("all");
+    setRecordChannelFilter(nextChannelType);
+    setRecordChannelIdFilter(channelId);
+    setRecordPage(1);
+    setRecordPageSize(100);
+    setActiveTab("records");
+  }
+
+  function handleInspectSelectedErrorCode() {
+    if (!selectedRetryableErrorCode) return;
+
+    setFocusMode("record-risk");
+    setSelectedRecord(null);
+    setRecordTaskFocus(null);
+    setRecordStatusFilter("all");
+    setRecordDiagnosticFilter("error-code");
+    setRecordChannelFilter("all");
+    setRecordChannelIdFilter("all");
+    setRecordErrorCodeFilter(selectedRetryableErrorCode);
+    setRecordPage(1);
+    setRecordPageSize(100);
+    setActiveTab("records");
   }
 
   function handleInspectRecordTask(record: PushRecord) {
@@ -655,6 +729,7 @@ export default function PushPage() {
     const linkedTask = dependencyTasks.find((task) => task.id === record.task_id);
     setSelectedRecord(null);
     setRecordDiagnosticFilter("all");
+    setRecordErrorCodeFilter("all");
     setRecordChannelFilter("all");
     setRecordChannelIdFilter("all");
     setRecordTaskFocus({
@@ -672,6 +747,7 @@ export default function PushPage() {
     setRecordTaskFocus(null);
     setRecordStatusFilter("all");
     setRecordDiagnosticFilter("all");
+    setRecordErrorCodeFilter("all");
     setRecordChannelFilter(record.channel_type);
     setRecordChannelIdFilter(record.channel_id);
     setRecordPage(1);
@@ -815,6 +891,7 @@ export default function PushPage() {
     setRecordTaskFocus(null);
     setRecordChannelFilter("all");
     setRecordChannelIdFilter("all");
+    setRecordErrorCodeFilter("all");
     setSelectedRecordIds([]);
     setRecordPage(1);
     setRecordPageSize(100);
@@ -1054,6 +1131,7 @@ export default function PushPage() {
                 recordStatusFilter={recordStatusFilter}
                 recordChannelFilter={recordChannelFilter}
                 recordChannelIdFilter={recordChannelIdFilter}
+                recordErrorCodeFilter={recordErrorCodeFilter}
                 recordDiagnosticFilter={recordDiagnosticFilter}
                 taskOptions={recordFilterTasks.data?.items ?? []}
                 channelOptions={recordFilterChannels.data?.items ?? []}
@@ -1073,10 +1151,17 @@ export default function PushPage() {
                 onRecordChannelChange={(value) => {
                   setRecordChannelFilter(value);
                   setRecordChannelIdFilter("all");
+                  setSelectedRecordIds([]);
                   setRecordPage(1);
                 }}
                 onRecordChannelIdChange={(value) => {
                   setRecordChannelIdFilter(value);
+                  setSelectedRecordIds([]);
+                  setRecordPage(1);
+                }}
+                onRecordErrorCodeChange={(value) => {
+                  setRecordErrorCodeFilter(value);
+                  setSelectedRecordIds([]);
                   setRecordPage(1);
                 }}
                 onRecordDiagnosticChange={(value) => {
@@ -1090,10 +1175,12 @@ export default function PushPage() {
                       ? null
                       : (recordFilterTasks.data?.items ?? []).find((task) => task.id === value) ?? null;
                   setRecordTaskFocus(nextTask ? { id: nextTask.id, name: nextTask.name } : null);
+                  setSelectedRecordIds([]);
                   setRecordPage(1);
                 }}
                 onClearTaskFilter={() => {
                   setRecordTaskFocus(null);
+                  setSelectedRecordIds([]);
                   setRecordPage(1);
                 }}
                 onRecordPageChange={setRecordPage}
@@ -1105,6 +1192,10 @@ export default function PushPage() {
                 selectedRecordIds={selectedRecordIds}
                 selectedRecordTaskCount={selectedRetryableTaskIds.length}
                 selectedRecordTaskName={selectedRetryableTaskName}
+                selectedRecordChannelCount={selectedRetryableChannelIds.length}
+                selectedRecordChannelName={selectedRetryableChannelName}
+                selectedRecordErrorCodeCount={selectedRetryableErrorCodes.length}
+                selectedRecordErrorCode={selectedRetryableErrorCode}
                 onToggleRecordSelection={(recordId, checked) =>
                   setSelectedRecordIds((current) =>
                     checked ? [...new Set([...current, recordId])] : current.filter((id) => id !== recordId)
@@ -1113,6 +1204,8 @@ export default function PushPage() {
                 onSelectRetryableRecords={(recordIds) => setSelectedRecordIds(recordIds)}
                 onClearRecordSelection={() => setSelectedRecordIds([])}
                 onFocusSelectedTask={handleFocusSelectedRecordTask}
+                onFocusSelectedChannel={handleFocusSelectedRecordChannel}
+                onInspectSelectedErrorCode={handleInspectSelectedErrorCode}
                 onRetryRecord={(record) => void handleRetryRecord(record)}
                 onRetrySelectedRecords={() => void handleBatchRetryRecords()}
                 isBatchRetrying={batchRetryingRecords}
@@ -1336,17 +1429,27 @@ export default function PushPage() {
             setDeletingTemplate(null);
           }
         }}
-        title="删除推送模板"
+        title={templateDeleteBlocked ? `模板「${deletingTemplate?.name}」仍有启用依赖` : "删除推送模板"}
         description={
           deletingTemplate
-            ? buildTemplateDependencyMessage(deletingTemplate, dependencyTasks, "delete")
+            ? templateDeleteBlocked
+              ? `${buildTemplateDependencyMessage(deletingTemplate, dependencyTasks, "delete")} 请先处理依赖这个模板的启用任务，再回来删除。`
+              : buildTemplateDependencyMessage(deletingTemplate, dependencyTasks, "delete")
             : "确定要删除当前模板吗？此操作不可撤销。"
         }
-        confirmText="删除"
+        confirmText={templateDeleteBlocked ? "查看依赖风险" : "删除"}
         cancelText="取消"
-        variant="destructive"
-        onConfirm={() => void handleDeleteTemplate()}
-        loading={deleteTemplateMutation.isMutating}
+        variant={templateDeleteBlocked ? "default" : "destructive"}
+        onConfirm={() => {
+          if (templateDeleteBlocked) {
+            setDeletingTemplate(null);
+            handleInspectTemplateRisk();
+            return;
+          }
+
+          void handleDeleteTemplate();
+        }}
+        loading={!templateDeleteBlocked && deleteTemplateMutation.isMutating}
       />
       <ConfirmDialog
         open={!!channelDisableConfirmation}
@@ -1374,17 +1477,27 @@ export default function PushPage() {
             setDeletingChannel(null);
           }
         }}
-        title="删除推送渠道"
+        title={channelDeleteBlocked ? `渠道「${deletingChannel?.name}」仍有启用依赖` : "删除推送渠道"}
         description={
           deletingChannel
-            ? buildChannelDependencyMessage(deletingChannel, dependencyTasks, "delete")
+            ? channelDeleteBlocked
+              ? `${buildChannelDependencyMessage(deletingChannel, dependencyTasks, "delete")} 请先处理这些启用任务的发送或告警链路，再回来删除。`
+              : buildChannelDependencyMessage(deletingChannel, dependencyTasks, "delete")
             : "确定要删除当前渠道吗？此操作不可撤销。"
         }
-        confirmText="删除"
+        confirmText={channelDeleteBlocked ? "查看依赖风险" : "删除"}
         cancelText="取消"
-        variant="destructive"
-        onConfirm={() => void handleDeleteChannel()}
-        loading={deleteChannelMutation.isMutating}
+        variant={channelDeleteBlocked ? "default" : "destructive"}
+        onConfirm={() => {
+          if (channelDeleteBlocked) {
+            setDeletingChannel(null);
+            handleInspectChannelRisk();
+            return;
+          }
+
+          void handleDeleteChannel();
+        }}
+        loading={!channelDeleteBlocked && deleteChannelMutation.isMutating}
       />
       <ConfirmDialog
         open={!!deletingTask}

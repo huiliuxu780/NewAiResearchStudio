@@ -3,9 +3,13 @@ import assert from "node:assert/strict";
 import {
   buildChannelDependencyMessage,
   buildTemplateDependencyMessage,
+  getRecordErrorCodeOptions,
   getRetryableRecords,
+  hasEnabledChannelDependencies,
+  hasEnabledTemplateDependencies,
   matchesRecordDiagnosticFilter,
   matchesTaskRiskFilter,
+  summarizeRetryableSelection,
   summarizeChannelDependencies,
   summarizeTaskRisk,
   summarizeTemplateDependencies,
@@ -65,6 +69,42 @@ test("buildChannelDependencyMessage warns when enabled tasks still depend on the
   assert.match(message, /启用任务依赖/);
 });
 
+test("hasEnabledChannelDependencies only flags enabled task usage", () => {
+  assert.equal(
+    hasEnabledChannelDependencies(
+      { id: "channel-1", name: "主飞书渠道" } as never,
+      [
+        {
+          id: "task-1",
+          name: "日报推送",
+          is_enabled: false,
+          channel_ids: ["channel-1"],
+          alert_on_failure: false,
+          alert_channel_id: null,
+        },
+      ] as never[]
+    ),
+    false
+  );
+
+  assert.equal(
+    hasEnabledChannelDependencies(
+      { id: "channel-1", name: "主飞书渠道" } as never,
+      [
+        {
+          id: "task-2",
+          name: "失败告警",
+          is_enabled: true,
+          channel_ids: [],
+          alert_on_failure: true,
+          alert_channel_id: "channel-1",
+        },
+      ] as never[]
+    ),
+    true
+  );
+});
+
 test("summarizeTemplateDependencies only counts linked tasks", () => {
   const summary = summarizeTemplateDependencies("template-1", [
     {
@@ -108,6 +148,38 @@ test("buildTemplateDependencyMessage warns when enabled tasks still use the temp
   assert.match(message, /主模板/);
   assert.match(message, /欢迎消息/);
   assert.match(message, /发送链路会受影响/);
+});
+
+test("hasEnabledTemplateDependencies only flags enabled task usage", () => {
+  assert.equal(
+    hasEnabledTemplateDependencies(
+      { id: "template-1", name: "主模板" } as never,
+      [
+        {
+          id: "task-1",
+          name: "欢迎消息",
+          is_enabled: false,
+          template_id: "template-1",
+        },
+      ] as never[]
+    ),
+    false
+  );
+
+  assert.equal(
+    hasEnabledTemplateDependencies(
+      { id: "template-1", name: "主模板" } as never,
+      [
+        {
+          id: "task-2",
+          name: "日报推送",
+          is_enabled: true,
+          template_id: "template-1",
+        },
+      ] as never[]
+    ),
+    true
+  );
 });
 
 test("summarizeTaskRisk collects failure, disabled template and disabled channel reasons", () => {
@@ -182,4 +254,31 @@ test("getRetryableRecords only returns failed records", () => {
     retryable.map((record) => record.id),
     ["record-1"]
   );
+});
+
+test("getRecordErrorCodeOptions groups and sorts error codes", () => {
+  const options = getRecordErrorCodeOptions([
+    { id: "record-1", error_code: "FEISHU_500" },
+    { id: "record-2", error_code: "EMAIL_TIMEOUT" },
+    { id: "record-3", error_code: "FEISHU_500" },
+    { id: "record-4", error_code: null },
+  ] as never[]);
+
+  assert.deepEqual(options, [
+    { value: "FEISHU_500", count: 2 },
+    { value: "EMAIL_TIMEOUT", count: 1 },
+  ]);
+});
+
+test("summarizeRetryableSelection extracts task, channel and error-code convergence", () => {
+  const summary = summarizeRetryableSelection([
+    { id: "record-1", status: "failed", task_id: "task-1", channel_id: "channel-1", error_code: "FEISHU_500" },
+    { id: "record-2", status: "failed", task_id: "task-1", channel_id: "channel-1", error_code: "FEISHU_500" },
+    { id: "record-3", status: "retrying", task_id: "task-2", channel_id: "channel-2", error_code: "EMAIL_TIMEOUT" },
+  ] as never[]);
+
+  assert.equal(summary.retryableCount, 2);
+  assert.deepEqual(summary.taskIds, ["task-1"]);
+  assert.deepEqual(summary.channelIds, ["channel-1"]);
+  assert.deepEqual(summary.errorCodes, ["FEISHU_500"]);
 });
