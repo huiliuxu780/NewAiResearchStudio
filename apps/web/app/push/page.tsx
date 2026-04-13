@@ -84,6 +84,7 @@ export default function PushPage() {
 
   const [recordStatusFilter, setRecordStatusFilter] = useState("all");
   const [recordChannelFilter, setRecordChannelFilter] = useState("all");
+  const [recordChannelIdFilter, setRecordChannelIdFilter] = useState("all");
   const [recordTaskFocus, setRecordTaskFocus] = useState<{ id: string; name: string } | null>(null);
   const [recordPage, setRecordPage] = useState(1);
   const [recordPageSize, setRecordPageSize] = useState(10);
@@ -145,12 +146,13 @@ export default function PushPage() {
   const recordQuery = useMemo<PushRecordsFilter>(
     () => ({
       task_id: recordTaskFocus?.id,
+      channel_id: recordChannelIdFilter !== "all" ? recordChannelIdFilter : undefined,
       status: recordStatusFilter !== "all" ? recordStatusFilter : undefined,
       channel_type: recordChannelFilter !== "all" ? recordChannelFilter : undefined,
       page: recordPage,
       page_size: recordPageSize,
     }),
-    [recordChannelFilter, recordPage, recordPageSize, recordStatusFilter, recordTaskFocus?.id]
+    [recordChannelFilter, recordChannelIdFilter, recordPage, recordPageSize, recordStatusFilter, recordTaskFocus?.id]
   );
 
   const templateQuery = useMemo<PushTemplatesFilter>(
@@ -169,6 +171,11 @@ export default function PushPage() {
   const templates = usePushTemplates(templateQuery);
   const taskEditorChannels = usePushChannels({ page: 1, page_size: 100 });
   const recordFilterTasks = usePushTasks({ page: 1, page_size: 100 });
+  const recordFilterChannels = usePushChannels({
+    page: 1,
+    page_size: 100,
+    channel_type: recordChannelFilter !== "all" ? recordChannelFilter : undefined,
+  });
   const taskEditorTemplates = usePushTemplates({ page: 1, page_size: 100 });
 
   const updateChannelMutation = useUpdatePushChannel();
@@ -238,6 +245,18 @@ export default function PushPage() {
     };
   }, [autoPreviewedTemplateId, previewTemplateMutation, selectedTemplate]);
 
+  useEffect(() => {
+    if (recordChannelIdFilter === "all") {
+      return;
+    }
+
+    const channelExists = (recordFilterChannels.data?.items ?? []).some((channel) => channel.id === recordChannelIdFilter);
+
+    if (!channelExists) {
+      setRecordChannelIdFilter("all");
+    }
+  }, [recordChannelIdFilter, recordFilterChannels.data?.items]);
+
   async function refreshPushData() {
     await Promise.all([
       mutate(["push-stats", 30]),
@@ -246,6 +265,15 @@ export default function PushPage() {
       mutate(["push-records", recordQuery]),
       mutate(["push-templates", templateQuery]),
       mutate(["push-channels", { page: 1, page_size: 100 }]),
+      mutate(["push-tasks", { page: 1, page_size: 100 }]),
+      mutate([
+        "push-channels",
+        {
+          page: 1,
+          page_size: 100,
+          channel_type: recordChannelFilter !== "all" ? recordChannelFilter : undefined,
+        },
+      ]),
       mutate(["push-templates", { page: 1, page_size: 100 }]),
     ]);
   }
@@ -730,7 +758,9 @@ export default function PushPage() {
               <PushRecordsTab
                 recordStatusFilter={recordStatusFilter}
                 recordChannelFilter={recordChannelFilter}
+                recordChannelIdFilter={recordChannelIdFilter}
                 taskOptions={recordFilterTasks.data?.items ?? []}
+                channelOptions={recordFilterChannels.data?.items ?? []}
                 selectedTaskId={recordTaskFocus?.id ?? null}
                 focusedTaskName={recordTaskFocus?.name ?? null}
                 data={records.data}
@@ -743,6 +773,11 @@ export default function PushPage() {
                 }}
                 onRecordChannelChange={(value) => {
                   setRecordChannelFilter(value);
+                  setRecordChannelIdFilter("all");
+                  setRecordPage(1);
+                }}
+                onRecordChannelIdChange={(value) => {
+                  setRecordChannelIdFilter(value);
                   setRecordPage(1);
                 }}
                 onRecordTaskChange={(value) => {

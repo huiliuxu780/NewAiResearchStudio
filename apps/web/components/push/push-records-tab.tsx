@@ -1,19 +1,23 @@
 "use client";
 
+import { useMemo } from "react";
 import { Eye, Loader2, RefreshCcw, Send } from "lucide-react";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatDuration, getChannelTypeLabel, getContentFormatLabel } from "@/components/push/push-shared";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { PaginatedResponse } from "@/lib/api";
-import type { PushRecord, PushTask } from "@/types/push";
+import type { PushChannel, PushRecord, PushTask } from "@/types/push";
 
 export function PushRecordsTab({
   recordStatusFilter,
   recordChannelFilter,
+  recordChannelIdFilter,
   taskOptions,
+  channelOptions,
   selectedTaskId,
   focusedTaskName,
   data,
@@ -22,6 +26,7 @@ export function PushRecordsTab({
   retryingRecordId,
   onRecordStatusChange,
   onRecordChannelChange,
+  onRecordChannelIdChange,
   onRecordTaskChange,
   onClearTaskFilter,
   onRecordPageChange,
@@ -31,7 +36,9 @@ export function PushRecordsTab({
 }: {
   recordStatusFilter: string;
   recordChannelFilter: string;
+  recordChannelIdFilter: string;
   taskOptions: PushTask[];
+  channelOptions: PushChannel[];
   selectedTaskId?: string | null;
   focusedTaskName?: string | null;
   data?: PaginatedResponse<PushRecord>;
@@ -40,6 +47,7 @@ export function PushRecordsTab({
   retryingRecordId: string | null;
   onRecordStatusChange: (value: string) => void;
   onRecordChannelChange: (value: string) => void;
+  onRecordChannelIdChange: (value: string) => void;
   onRecordTaskChange: (value: string) => void;
   onClearTaskFilter: () => void;
   onRecordPageChange: (page: number) => void;
@@ -47,6 +55,37 @@ export function PushRecordsTab({
   onViewRecord: (record: PushRecord) => void;
   onRetryRecord: (record: PushRecord) => void;
 }) {
+  const taskNameById = useMemo(
+    () =>
+      taskOptions.reduce<Record<string, string>>((acc, task) => {
+        acc[task.id] = task.name;
+        return acc;
+      }, {}),
+    [taskOptions]
+  );
+
+  const channelNameById = useMemo(
+    () =>
+      channelOptions.reduce<Record<string, string>>((acc, channel) => {
+        acc[channel.id] = channel.name;
+        return acc;
+      }, {}),
+    [channelOptions]
+  );
+
+  const summary = useMemo(() => {
+    const counts = { total: data?.items.length ?? 0, success: 0, failed: 0, retrying: 0, pending: 0 };
+
+    (data?.items ?? []).forEach((record) => {
+      if (record.status === "success") counts.success += 1;
+      if (record.status === "failed") counts.failed += 1;
+      if (record.status === "retrying") counts.retrying += 1;
+      if (record.status === "pending") counts.pending += 1;
+    });
+
+    return counts;
+  }, [data?.items]);
+
   return (
     <Card className="border-border/40 bg-background/50 py-0">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 py-4 md:flex-row md:items-end md:justify-between">
@@ -89,6 +128,20 @@ export function PushRecordsTab({
             </SelectContent>
           </Select>
 
+          <Select value={recordChannelIdFilter} onValueChange={(value) => onRecordChannelIdChange(value ?? "all")}>
+            <SelectTrigger className="w-[180px] bg-background/70">
+              <SelectValue placeholder="具体渠道" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部配置</SelectItem>
+              {channelOptions.map((channel) => (
+                <SelectItem key={channel.id} value={channel.id}>
+                  {channel.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={selectedTaskId ?? "all"} onValueChange={(value) => onRecordTaskChange(value ?? "all")}>
             <SelectTrigger className="w-[180px] bg-background/70">
               <SelectValue placeholder="关联任务" />
@@ -114,6 +167,13 @@ export function PushRecordsTab({
         </CardContent>
       ) : data?.items.length ? (
         <>
+          <CardContent className="grid gap-3 border-b border-border/50 py-4 md:grid-cols-4">
+            <RecordSummaryCard label="当前页记录" value={summary.total} tone="slate" />
+            <RecordSummaryCard label="成功" value={summary.success} tone="emerald" />
+            <RecordSummaryCard label="失败" value={summary.failed} tone="rose" />
+            <RecordSummaryCard label="重试与待处理" value={summary.retrying + summary.pending} tone="amber" />
+          </CardContent>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -132,11 +192,31 @@ export function PushRecordsTab({
                   <TableCell className="max-w-[280px] whitespace-normal">
                     <div className="space-y-1">
                       <p className="font-medium text-foreground">{record.title}</p>
-                      <p className="text-xs text-muted-foreground">{getContentFormatLabel(record.content_format)}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span>{taskNameById[record.task_id] ?? `任务 ${record.task_id.slice(0, 8)}`}</span>
+                        <span>·</span>
+                        <span>{getContentFormatLabel(record.content_format)}</span>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>{getChannelTypeLabel(record.channel_type)}</TableCell>
-                  <TableCell><PushStatusBadge status={record.status} /></TableCell>
+                  <TableCell className="max-w-[220px] whitespace-normal">
+                    <div className="space-y-1">
+                      <p className="font-medium text-foreground">{channelNameById[record.channel_id] ?? "未命名渠道"}</p>
+                      <p className="text-xs text-muted-foreground">{getChannelTypeLabel(record.channel_type)}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="max-w-[260px] whitespace-normal">
+                    <div className="space-y-1">
+                      <PushStatusBadge status={record.status} />
+                      {record.error_message ? (
+                        <p className="line-clamp-2 text-xs text-destructive">{record.error_message}</p>
+                      ) : record.status === "success" ? (
+                        <p className="text-xs text-emerald-500">本次投递已成功完成。</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">最近一次执行暂未返回错误详情。</p>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{record.retry_count} / {record.max_retries}</TableCell>
                   <TableCell>{formatDuration(record.duration_ms)}</TableCell>
                   <TableCell>{formatDateTime(record.completed_at)}</TableCell>
@@ -172,5 +252,36 @@ export function PushRecordsTab({
         </CardContent>
       )}
     </Card>
+  );
+}
+
+function RecordSummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "slate" | "emerald" | "rose" | "amber";
+}) {
+  const badgeClassName =
+    tone === "emerald"
+      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+      : tone === "rose"
+        ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
+        : tone === "amber"
+          ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+          : "border-border bg-muted/30 text-muted-foreground";
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-background/70 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+        <Badge variant="outline" className={badgeClassName}>
+          {value}
+        </Badge>
+      </div>
+      <p className="mt-3 text-2xl font-semibold text-foreground">{value}</p>
+    </div>
   );
 }
