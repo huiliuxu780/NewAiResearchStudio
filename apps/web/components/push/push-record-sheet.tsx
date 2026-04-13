@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, Clock3, Mail, Send } from "lucide-react";
+import { AlertCircle, Clock3, Mail, RefreshCcw, Search, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,10 +12,18 @@ export function PushRecordSheet({
   record,
   open,
   onOpenChange,
+  onInspectTask,
+  onInspectChannel,
+  onRetryRecord,
+  retrying,
 }: {
   record: PushRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onInspectTask?: (record: PushRecord) => void;
+  onInspectChannel?: (record: PushRecord) => void;
+  onRetryRecord?: (record: PushRecord) => void;
+  retrying?: boolean;
 }) {
   if (!record) return null;
 
@@ -37,6 +46,23 @@ export function PushRecordSheet({
                 <p className="mt-1 text-lg font-semibold text-foreground">{record.title}</p>
               </div>
               <PushStatusBadge status={record.status} />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => onInspectTask?.(record)}>
+                <Search className="h-3.5 w-3.5" />
+                查看任务记录
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => onInspectChannel?.(record)}>
+                <Mail className="h-3.5 w-3.5" />
+                同渠道诊断
+              </Button>
+              {record.status === "failed" && (
+                <Button size="sm" variant="secondary" disabled={retrying} onClick={() => onRetryRecord?.(record)}>
+                  <RefreshCcw className="h-3.5 w-3.5" />
+                  {retrying ? "重试中..." : "重试这条"}
+                </Button>
+              )}
             </div>
 
             <PushDetailRow icon={Mail} label="渠道类型" value={getChannelTypeLabel(record.channel_type)} />

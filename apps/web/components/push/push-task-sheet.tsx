@@ -1,6 +1,7 @@
 "use client";
 
-import { BellRing, Clock3, Filter, Repeat, Send, ShieldAlert } from "lucide-react";
+import { BellRing, Clock3, Filter, Play, Repeat, Send, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,10 +12,14 @@ export function PushTaskSheet({
   task,
   open,
   onOpenChange,
+  onInspectRecords,
+  onTriggerTask,
 }: {
   task: PushTask | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onInspectRecords?: (task: PushTask) => void;
+  onTriggerTask?: (task: PushTask) => void;
 }) {
   if (!task) return null;
 
@@ -37,6 +42,17 @@ export function PushTaskSheet({
                 <p className="mt-1 text-lg font-semibold text-foreground">{task.name}</p>
               </div>
               <PushStatusBadge status={task.status} />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => onInspectRecords?.(task)}>
+                <Send className="h-3.5 w-3.5" />
+                查看记录
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => onTriggerTask?.(task)}>
+                <Play className="h-3.5 w-3.5" />
+                立即触发
+              </Button>
             </div>
 
             <PushDetailRow icon={Send} label="触发方式" value={getTriggerTypeLabel(task.trigger_type)} />

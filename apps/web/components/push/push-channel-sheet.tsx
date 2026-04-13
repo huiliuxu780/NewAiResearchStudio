@@ -1,6 +1,7 @@
 "use client";
 
-import { Globe, RadioTower, Settings2, ToggleLeft } from "lucide-react";
+import { AlertTriangle, Globe, RadioTower, Search, Settings2, ToggleLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,10 +12,14 @@ export function PushChannelSheet({
   channel,
   open,
   onOpenChange,
+  onInspectRecords,
+  onInspectRisk,
 }: {
   channel: PushChannel | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onInspectRecords?: (channel: PushChannel) => void;
+  onInspectRisk?: () => void;
 }) {
   if (!channel) return null;
 
@@ -31,6 +36,19 @@ export function PushChannelSheet({
 
         <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
           <div className="mt-4 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => onInspectRecords?.(channel)}>
+                <Search className="h-3.5 w-3.5" />
+                查看记录
+              </Button>
+              {!channel.is_enabled && (
+                <Button size="sm" variant="secondary" onClick={() => onInspectRisk?.()}>
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  查看依赖风险
+                </Button>
+              )}
+            </div>
+
             <PushDetailRow icon={RadioTower} label="渠道名称" value={channel.name} />
             <PushDetailRow icon={Globe} label="渠道类型" value={getChannelTypeLabel(channel.channel_type)} />
             <PushDetailRow icon={ToggleLeft} label="启用状态" value={channel.is_enabled ? "已启用" : "已停用"} />

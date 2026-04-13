@@ -506,8 +506,24 @@ export default function PushPage() {
   }
 
   function handleInspectTaskRecords(task: PushTask) {
+    setFocusMode("none");
     setRecordTaskFocus({ id: task.id, name: task.name });
+    setRecordDiagnosticFilter("all");
+    setRecordChannelFilter("all");
+    setRecordChannelIdFilter("all");
     setRecordPage(1);
+    setActiveTab("records");
+  }
+
+  function handleInspectChannelRecords(channel: PushChannel) {
+    setFocusMode("none");
+    setRecordTaskFocus(null);
+    setRecordDiagnosticFilter("all");
+    setRecordStatusFilter("all");
+    setRecordChannelFilter(channel.channel_type);
+    setRecordChannelIdFilter(channel.id);
+    setRecordPage(1);
+    setRecordPageSize(100);
     setActiveTab("records");
   }
 
@@ -631,6 +647,35 @@ export default function PushPage() {
     const taskName = selectedRetryableTaskName ?? dependencyTasks.find((task) => task.id === taskId)?.name ?? "关联任务";
     setRecordTaskFocus({ id: taskId, name: taskName });
     setRecordPage(1);
+  }
+
+  function handleInspectRecordTask(record: PushRecord) {
+    setFocusMode("none");
+    const linkedTask = dependencyTasks.find((task) => task.id === record.task_id);
+    setSelectedRecord(null);
+    setRecordDiagnosticFilter("all");
+    setRecordChannelFilter("all");
+    setRecordChannelIdFilter("all");
+    setRecordTaskFocus({
+      id: record.task_id,
+      name: linkedTask?.name ?? `任务 ${record.task_id.slice(0, 8)}`,
+    });
+    setRecordPage(1);
+    setRecordPageSize(100);
+    setActiveTab("records");
+  }
+
+  function handleInspectRecordChannel(record: PushRecord) {
+    setFocusMode("none");
+    setSelectedRecord(null);
+    setRecordTaskFocus(null);
+    setRecordStatusFilter("all");
+    setRecordDiagnosticFilter("all");
+    setRecordChannelFilter(record.channel_type);
+    setRecordChannelIdFilter(record.channel_id);
+    setRecordPage(1);
+    setRecordPageSize(100);
+    setActiveTab("records");
   }
 
   async function handlePreviewTemplate(template: PushTemplate, nextVariablesText?: string) {
@@ -1088,7 +1133,19 @@ export default function PushPage() {
 
       <PushMetricHints stats={stats.data} />
 
-      <PushChannelSheet channel={selectedChannel} open={!!selectedChannel} onOpenChange={(open) => !open && setSelectedChannel(null)} />
+      <PushChannelSheet
+        channel={selectedChannel}
+        open={!!selectedChannel}
+        onOpenChange={(open) => !open && setSelectedChannel(null)}
+        onInspectRecords={(channel) => {
+          setSelectedChannel(null);
+          handleInspectChannelRecords(channel);
+        }}
+        onInspectRisk={() => {
+          setSelectedChannel(null);
+          handleInspectChannelRisk();
+        }}
+      />
       <PushChannelEditorSheet
         channel={editingChannel}
         initialChannel={channelDraftSource}
@@ -1133,8 +1190,28 @@ export default function PushPage() {
         onSubmit={(data) => triggerTaskDraft && void handleSubmitTaskTrigger(triggerTaskDraft, data)}
         isSubmitting={Boolean(triggerTaskDraft && triggeringTaskId === triggerTaskDraft.id)}
       />
-      <PushTaskSheet task={selectedTask} open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)} />
-      <PushRecordSheet record={selectedRecord} open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)} />
+      <PushTaskSheet
+        task={selectedTask}
+        open={!!selectedTask}
+        onOpenChange={(open) => !open && setSelectedTask(null)}
+        onInspectRecords={(task) => {
+          setSelectedTask(null);
+          handleInspectTaskRecords(task);
+        }}
+        onTriggerTask={(task) => {
+          setSelectedTask(null);
+          void handleTriggerTask(task);
+        }}
+      />
+      <PushRecordSheet
+        record={selectedRecord}
+        open={!!selectedRecord}
+        onOpenChange={(open) => !open && setSelectedRecord(null)}
+        onInspectTask={handleInspectRecordTask}
+        onInspectChannel={handleInspectRecordChannel}
+        onRetryRecord={(record) => void handleRetryRecord(record)}
+        retrying={Boolean(selectedRecord && retryingRecordId === selectedRecord.id)}
+      />
       <PushTemplateSheet template={detailTemplate} open={!!detailTemplate} onOpenChange={(open) => !open && setDetailTemplate(null)} />
       <PushTemplateEditorSheet
         template={editingTemplate}
