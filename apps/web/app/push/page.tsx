@@ -19,6 +19,7 @@ import { PushTaskSheet } from "@/components/push/push-task-sheet";
 import { PushTemplateSheet } from "@/components/push/push-template-sheet";
 import { PushTemplateEditorSheet } from "@/components/push/push-template-editor-sheet";
 import { PushTemplatesTab } from "@/components/push/push-templates-tab";
+import { PushWorkbenchShortcuts } from "@/components/push/push-workbench-shortcuts";
 import { PushRecordsTab } from "@/components/push/push-records-tab";
 import { PushTasksTab } from "@/components/push/push-tasks-tab";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -883,6 +884,36 @@ export default function PushPage() {
 
       <PushStatsCards stats={stats.data} isLoading={stats.isLoading} />
       <PushAnalyticsPanel stats={stats.data} isLoading={stats.isLoading} />
+
+      <PushWorkbenchShortcuts
+        activeTab={activeTab as "channels" | "tasks" | "records" | "templates"}
+        focusMode={focusMode}
+        selectedTemplateName={selectedTemplate?.name ?? null}
+        selectedRetryableCount={selectedRetryableRecords.length}
+        selectedRetryableTaskName={selectedRetryableTaskName}
+        onCreateChannel={() => {
+          setEditingChannel(null);
+          setChannelDraftSource(null);
+          setChannelEditorOpen(true);
+        }}
+        onCreateTask={() => {
+          setEditingTask(null);
+          setTaskDraftSource(null);
+          setTaskEditorOpen(true);
+        }}
+        onCreateTemplate={() => {
+          setEditingTemplate(null);
+          setTemplateDraftSource(null);
+          setTemplateEditorOpen(true);
+        }}
+        onEnterTaskRisk={() => handleInspectTaskRisk()}
+        onEnterChannelRisk={handleInspectChannelRisk}
+        onEnterTemplateRisk={handleInspectTemplateRisk}
+        onEnterRecordRisk={() => handleInspectRecordRisk()}
+        onBatchRetryRecords={() => void handleBatchRetryRecords()}
+        onFocusSelectedTask={handleFocusSelectedRecordTask}
+        onPreviewSelectedTemplate={() => selectedTemplate && handleOpenTemplatePreview(selectedTemplate)}
+      />
 
       <Card className="border-border/40 bg-card/80">
         <CardContent className="pt-4">
