@@ -738,9 +738,10 @@ export default function PushPage() {
     setActiveTab("channels");
   }
 
-  function handleInspectTaskRisk() {
+  function handleInspectTaskRisk(filter: PushTaskRiskFilter = "risk") {
     setFocusMode("task-risk");
     setTaskEnabledFilter("true");
+    setTaskRiskFilter(filter);
     setTaskPage(1);
     setTaskPageSize(100);
     setActiveTab("tasks");
@@ -754,12 +755,14 @@ export default function PushPage() {
     setActiveTab("templates");
   }
 
-  function handleInspectRecordRisk() {
+  function handleInspectRecordRisk(filter: PushRecordDiagnosticFilter = "all") {
     setFocusMode("record-risk");
     setRecordStatusFilter("all");
+    setRecordDiagnosticFilter(filter);
     setRecordTaskFocus(null);
     setRecordChannelFilter("all");
     setRecordChannelIdFilter("all");
+    setSelectedRecordIds([]);
     setRecordPage(1);
     setRecordPageSize(100);
     setActiveTab("records");

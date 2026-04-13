@@ -2,6 +2,7 @@
 
 import { type ElementType, useMemo } from "react";
 import { AlertTriangle, ArrowRight, BellRing, FileText, RadioTower, RefreshCcw } from "lucide-react";
+import type { PushRecordDiagnosticFilter, PushTaskRiskFilter } from "@/lib/push-console-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +23,8 @@ export function PushRiskRadar({
   tasks: PushTask[];
   templates: PushTemplate[];
   onInspectChannelRisk: () => void;
-  onInspectTaskRisk: () => void;
-  onInspectRecordRisk: () => void;
+  onInspectTaskRisk: (filter?: PushTaskRiskFilter) => void;
+  onInspectRecordRisk: (filter?: PushRecordDiagnosticFilter) => void;
   onInspectTemplateRisk: () => void;
 }) {
   const channelRisk = useMemo(() => {
@@ -61,6 +62,7 @@ export function PushRiskRadar({
   }, [tasks, templates]);
 
   const recordRiskCount = (stats?.summary.failed_count ?? 0) + (stats?.summary.retrying_count ?? 0);
+  const failureTaskRiskCount = tasks.filter((task) => task.is_enabled && task.failure_count > 0).length;
   const taskRisk = useMemo(() => {
     const disabledChannelIds = new Set(channels.filter((channel) => !channel.is_enabled).map((channel) => channel.id));
     const disabledTemplateIds = new Set(templates.filter((template) => !template.is_enabled).map((template) => template.id));
@@ -73,6 +75,14 @@ export function PushRiskRadar({
           task.channel_ids.some((channelId) => disabledChannelIds.has(channelId)))
     );
   }, [channels, tasks, templates]);
+  const dependencyTaskRiskCount = useMemo(() => {
+    const dependencyIds = new Set([
+      ...channelRisk.impactedTasks.map((task) => task.id),
+      ...templateRisk.impactedTasks.map((task) => task.id),
+    ]);
+
+    return tasks.filter((task) => task.is_enabled && dependencyIds.has(task.id)).length;
+  }, [channelRisk.impactedTasks, tasks, templateRisk.impactedTasks]);
 
   return (
     <Card className="border-border/40 bg-background/60">
@@ -100,6 +110,10 @@ export function PushRiskRadar({
           examples={taskRisk.map((task) => task.name)}
           actionLabel="查看风险任务"
           onAction={onInspectTaskRisk}
+          quickActions={[
+            { label: `失败风险 ${failureTaskRiskCount}`, onAction: () => onInspectTaskRisk("failing") },
+            { label: `依赖风险 ${dependencyTaskRiskCount}`, onAction: () => onInspectTaskRisk("dependency") },
+          ]}
         />
 
         <RiskCard
@@ -154,6 +168,11 @@ export function PushRiskRadar({
           }
           actionLabel="查看记录风险"
           onAction={onInspectRecordRisk}
+          quickActions={[
+            { label: `可重试 ${stats?.summary.failed_count ?? 0}`, onAction: () => onInspectRecordRisk("retryable") },
+            { label: "错误码排查", onAction: () => onInspectRecordRisk("error-code") },
+            { label: "重试耗尽", onAction: () => onInspectRecordRisk("retry-exhausted") },
+          ]}
         />
       </CardContent>
     </Card>
@@ -168,6 +187,7 @@ function RiskCard({
   examples,
   icon: Icon,
   onAction,
+  quickActions = [],
   title,
 }: {
   actionLabel: string;
@@ -177,6 +197,7 @@ function RiskCard({
   examples: string[];
   icon: ElementType;
   onAction: () => void;
+  quickActions?: Array<{ label: string; onAction: () => void }>;
   title: string;
 }) {
   return (
@@ -218,6 +239,15 @@ function RiskCard({
         {actionLabel}
         <ArrowRight className="h-3.5 w-3.5" />
       </Button>
+      {quickActions.length ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {quickActions.map((item) => (
+            <Button key={item.label} variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={item.onAction}>
+              {item.label}
+            </Button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
