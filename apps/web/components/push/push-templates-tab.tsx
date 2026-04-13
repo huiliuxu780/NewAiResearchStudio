@@ -35,6 +35,7 @@ export function PushTemplatesTab({
   onEditTemplate,
   onDuplicateTemplate,
   onDeleteTemplate,
+  onInspectDependencyTasks,
   onViewTemplate,
   onPreviewVariablesTextChange,
   onPreview,
@@ -60,6 +61,7 @@ export function PushTemplatesTab({
   onEditTemplate: (template: PushTemplate) => void;
   onDuplicateTemplate: (template: PushTemplate) => void;
   onDeleteTemplate: (template: PushTemplate) => void;
+  onInspectDependencyTasks: (template: PushTemplate) => void;
   onViewTemplate: (template: PushTemplate) => void;
   onPreviewVariablesTextChange: (value: string) => void;
   onPreview: () => void;
@@ -189,6 +191,9 @@ export function PushTemplatesTab({
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => onDuplicateTemplate(template)}>
                           复制
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onInspectDependencyTasks(template)}>
+                          依赖任务
                         </Button>
                         {!template.is_system && (
                           <Button size="sm" variant="outline" onClick={() => onDeleteTemplate(template)}>

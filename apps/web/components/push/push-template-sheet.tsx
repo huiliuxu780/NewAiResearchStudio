@@ -16,6 +16,7 @@ export function PushTemplateSheet({
   dependentTasks,
   onEditTemplate,
   onDuplicateTemplate,
+  onInspectDependencyTasks,
   onInspectTask,
   onPreviewTemplate,
   onInspectRisk,
@@ -26,6 +27,7 @@ export function PushTemplateSheet({
   dependentTasks?: PushTask[];
   onEditTemplate?: (template: PushTemplate) => void;
   onDuplicateTemplate?: (template: PushTemplate) => void;
+  onInspectDependencyTasks?: (template: PushTemplate) => void;
   onInspectTask?: (task: PushTask) => void;
   onPreviewTemplate?: (template: PushTemplate) => void;
   onInspectRisk?: () => void;
@@ -60,6 +62,9 @@ export function PushTemplateSheet({
               <Button size="sm" variant="outline" onClick={() => onPreviewTemplate?.(template)}>
                 <Sparkles className="h-3.5 w-3.5" />
                 查看模板预览
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => onInspectDependencyTasks?.(template)}>
+                依赖任务
               </Button>
               {!template.is_enabled && (
                 <Button size="sm" variant="secondary" onClick={() => onInspectRisk?.()}>

@@ -16,6 +16,7 @@ export function PushChannelSheet({
   dependentTasks,
   onEditChannel,
   onDuplicateChannel,
+  onInspectDependencyTasks,
   onInspectRecords,
   onInspectTask,
   onInspectRisk,
@@ -26,6 +27,7 @@ export function PushChannelSheet({
   dependentTasks?: PushTask[];
   onEditChannel?: (channel: PushChannel) => void;
   onDuplicateChannel?: (channel: PushChannel) => void;
+  onInspectDependencyTasks?: (channel: PushChannel) => void;
   onInspectRecords?: (channel: PushChannel) => void;
   onInspectTask?: (task: PushTask) => void;
   onInspectRisk?: () => void;
@@ -60,6 +62,9 @@ export function PushChannelSheet({
               <Button size="sm" variant="outline" onClick={() => onInspectRecords?.(channel)}>
                 <Search className="h-3.5 w-3.5" />
                 查看记录
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => onInspectDependencyTasks?.(channel)}>
+                依赖任务
               </Button>
               {!channel.is_enabled && (
                 <Button size="sm" variant="secondary" onClick={() => onInspectRisk?.()}>

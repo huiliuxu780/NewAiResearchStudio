@@ -7,6 +7,7 @@ import {
   getRetryableRecords,
   hasEnabledChannelDependencies,
   hasEnabledTemplateDependencies,
+  matchesTaskDependencyFocus,
   matchesRecordDiagnosticFilter,
   matchesTaskRiskFilter,
   summarizeRetryableSelection,
@@ -228,6 +229,22 @@ test("matchesTaskRiskFilter distinguishes failing and dependency risks", () => {
   assert.equal(matchesTaskRiskFilter(failureOnly, "dependency"), false);
   assert.equal(matchesTaskRiskFilter(dependencyOnly, "failing"), false);
   assert.equal(matchesTaskRiskFilter(dependencyOnly, "dependency"), true);
+});
+
+test("matchesTaskDependencyFocus narrows tasks by linked channel or template", () => {
+  const task = {
+    id: "task-1",
+    channel_ids: ["channel-1"],
+    alert_channel_id: "channel-2",
+    template_id: "template-1",
+  };
+
+  assert.equal(matchesTaskDependencyFocus(task as never, null), true);
+  assert.equal(matchesTaskDependencyFocus(task as never, { type: "channel", id: "channel-1" }), true);
+  assert.equal(matchesTaskDependencyFocus(task as never, { type: "channel", id: "channel-2" }), true);
+  assert.equal(matchesTaskDependencyFocus(task as never, { type: "channel", id: "channel-3" }), false);
+  assert.equal(matchesTaskDependencyFocus(task as never, { type: "template", id: "template-1" }), true);
+  assert.equal(matchesTaskDependencyFocus(task as never, { type: "template", id: "template-2" }), false);
 });
 
 test("matchesRecordDiagnosticFilter distinguishes retryable, error-code and exhausted records", () => {

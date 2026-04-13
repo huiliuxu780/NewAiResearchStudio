@@ -2,7 +2,7 @@
 
 import { type ElementType, useMemo } from "react";
 import { AlertTriangle, BellRing, Eye, Loader2, Play, Plus, Send, TrendingUp } from "lucide-react";
-import { matchesTaskRiskFilter, summarizeTaskRisk, type PushTaskRiskFilter } from "@/lib/push-console-utils";
+import { matchesTaskDependencyFocus, matchesTaskRiskFilter, summarizeTaskRisk, type PushTaskDependencyFocus, type PushTaskRiskFilter } from "@/lib/push-console-utils";
 import { PushSectionEmpty, PushStatusBadge, formatDateTime, formatPercent, getTriggerTypeLabel } from "@/components/push/push-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ export function PushTasksTab({
   taskStatusFilter,
   taskEnabledFilter,
   taskRiskFilter,
+  taskDependencyFocus,
+  taskDependencyFocusName,
   channelOptions,
   data,
   error,
@@ -32,6 +34,7 @@ export function PushTasksTab({
   onTaskStatusChange,
   onTaskEnabledChange,
   onTaskRiskChange,
+  onClearTaskDependencyFocus,
   onTaskPageChange,
   onTaskPageSizeChange,
   onCreateTask,
@@ -39,6 +42,8 @@ export function PushTasksTab({
   onDuplicateTask,
   onDeleteTask,
   onInspectTaskRecords,
+  onInspectChannel,
+  onInspectTemplate,
   onViewTask,
   onToggleTask,
   onTriggerTask,
@@ -47,6 +52,8 @@ export function PushTasksTab({
   taskStatusFilter: string;
   taskEnabledFilter: string;
   taskRiskFilter: PushTaskRiskFilter;
+  taskDependencyFocus: PushTaskDependencyFocus | null;
+  taskDependencyFocusName?: string | null;
   channelOptions: PushChannel[];
   data?: PaginatedResponse<PushTask>;
   error?: Error;
@@ -61,6 +68,7 @@ export function PushTasksTab({
   onTaskStatusChange: (value: string) => void;
   onTaskEnabledChange: (value: string) => void;
   onTaskRiskChange: (value: PushTaskRiskFilter) => void;
+  onClearTaskDependencyFocus: () => void;
   onTaskPageChange: (page: number) => void;
   onTaskPageSizeChange: (size: number) => void;
   onCreateTask: () => void;
@@ -68,6 +76,8 @@ export function PushTasksTab({
   onDuplicateTask: (task: PushTask) => void;
   onDeleteTask: (task: PushTask) => void;
   onInspectTaskRecords: (task: PushTask) => void;
+  onInspectChannel: (channel: PushChannel) => void;
+  onInspectTemplate: (template: PushTemplate) => void;
   onViewTask: (task: PushTask) => void;
   onToggleTask: (task: PushTask) => void;
   onTriggerTask: (task: PushTask) => void;
@@ -146,10 +156,15 @@ export function PushTasksTab({
 
   const displayItems = useMemo(
     () =>
-      (focusMode === "risk" ? (data?.items ?? []).filter((task) => riskTaskIds.has(task.id)) : (data?.items ?? [])).filter((task) =>
-        matchesTaskRiskFilter(riskSummaryByTaskId[task.id] ?? { hasRisk: false, failureCount: 0, disabledChannelCount: 0, disabledTemplate: false, reasons: [] }, taskRiskFilter)
-      ),
-    [data?.items, focusMode, riskSummaryByTaskId, riskTaskIds, taskRiskFilter]
+      (focusMode === "risk" ? (data?.items ?? []).filter((task) => riskTaskIds.has(task.id)) : (data?.items ?? []))
+        .filter((task) => matchesTaskDependencyFocus(task, taskDependencyFocus))
+        .filter((task) =>
+          matchesTaskRiskFilter(
+            riskSummaryByTaskId[task.id] ?? { hasRisk: false, failureCount: 0, disabledChannelCount: 0, disabledTemplate: false, reasons: [] },
+            taskRiskFilter
+          )
+        ),
+    [data?.items, focusMode, riskSummaryByTaskId, riskTaskIds, taskDependencyFocus, taskRiskFilter]
   );
 
   return (
@@ -232,6 +247,20 @@ export function PushTasksTab({
         </CardContent>
       )}
 
+      {taskDependencyFocus && taskDependencyFocusName ? (
+        <CardContent className="flex flex-col gap-3 border-b border-border/50 py-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              依赖聚焦：{taskDependencyFocus.type === "channel" ? "渠道" : "模板"}「{taskDependencyFocusName}」
+            </p>
+            <p className="text-xs text-muted-foreground">当前只显示和这个对象直接关联的任务，适合集中处理依赖关系。</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={onClearTaskDependencyFocus}>
+            清除依赖聚焦
+          </Button>
+        </CardContent>
+      ) : null}
+
       {error ? (
         <CardContent className="py-8 text-sm text-destructive">{error.message}</CardContent>
       ) : isLoading ? (
@@ -272,7 +301,13 @@ export function PushTasksTab({
                   </TableCell>
                   <TableCell>{getTriggerTypeLabel(task.trigger_type)}</TableCell>
                   <TableCell className="min-w-[260px] max-w-[320px] whitespace-normal">
-                    <TaskResourceCell task={task} channelById={channelById} templateById={templateById} />
+                    <TaskResourceCell
+                      task={task}
+                      channelById={channelById}
+                      templateById={templateById}
+                      onInspectChannel={onInspectChannel}
+                      onInspectTemplate={onInspectTemplate}
+                    />
                   </TableCell>
                   <TableCell className="min-w-[180px]">
                     <div className="space-y-1">
@@ -402,10 +437,14 @@ function TaskResourceCell({
   task,
   channelById,
   templateById,
+  onInspectChannel,
+  onInspectTemplate,
 }: {
   task: PushTask;
   channelById: Record<string, PushChannel>;
   templateById: Record<string, PushTemplate>;
+  onInspectChannel: (channel: PushChannel) => void;
+  onInspectTemplate: (template: PushTemplate) => void;
 }) {
   const linkedChannels = task.channel_ids.map((channelId) => channelById[channelId]).filter(Boolean);
   const disabledChannelCount = linkedChannels.filter((channel) => !channel.is_enabled).length;
@@ -416,7 +455,13 @@ function TaskResourceCell({
       <div className="space-y-1">
         <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">模板</p>
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-medium text-foreground">{template?.name ?? "未绑定模板"}</p>
+          {template ? (
+            <Button size="sm" variant="outline" onClick={() => onInspectTemplate(template)}>
+              {template.name}
+            </Button>
+          ) : (
+            <p className="text-sm font-medium text-foreground">未绑定模板</p>
+          )}
           {template && (
             <Badge
               variant="outline"
@@ -437,19 +482,17 @@ function TaskResourceCell({
         {linkedChannels.length ? (
           <>
             <div className="flex flex-wrap gap-1.5">
-              {linkedChannels.slice(0, 2).map((channel) => (
-                <Badge
-                  key={channel.id}
-                  variant="outline"
-                  className={
-                    channel.is_enabled
-                      ? "border-border bg-background/60 text-foreground"
-                      : "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                  }
-                >
-                  {channel.name}
-                </Badge>
-              ))}
+              {linkedChannels.slice(0, 2).map((channel) => {
+                const className = channel.is_enabled
+                  ? "border-border bg-background/60 text-foreground"
+                  : "border-amber-500/20 bg-amber-500/10 text-amber-400";
+
+                return (
+                  <Button key={channel.id} size="sm" variant="outline" className={className} onClick={() => onInspectChannel(channel)}>
+                    {channel.name}
+                  </Button>
+                );
+              })}
               {linkedChannels.length > 2 && (
                 <Badge variant="outline" className="border-border bg-background/60 text-muted-foreground">
                   +{linkedChannels.length - 2}

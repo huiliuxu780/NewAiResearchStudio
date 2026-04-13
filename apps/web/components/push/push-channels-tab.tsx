@@ -31,6 +31,7 @@ export function PushChannelsTab({
   onEditChannel,
   onDuplicateChannel,
   onDeleteChannel,
+  onInspectDependencyTasks,
   onViewChannel,
   onToggleChannel,
 }: {
@@ -52,6 +53,7 @@ export function PushChannelsTab({
   onEditChannel: (channel: PushChannel) => void;
   onDuplicateChannel: (channel: PushChannel) => void;
   onDeleteChannel: (channel: PushChannel) => void;
+  onInspectDependencyTasks: (channel: PushChannel) => void;
   onViewChannel: (channel: PushChannel) => void;
   onToggleChannel: (channel: PushChannel) => void;
 }) {
@@ -211,6 +213,9 @@ export function PushChannelsTab({
                       <Button size="sm" variant="outline" onClick={() => onDuplicateChannel(channel)}>
                         <Copy className="h-3.5 w-3.5" />
                         复制
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onInspectDependencyTasks(channel)}>
+                        依赖任务
                       </Button>
                       <Button
                         size="sm"

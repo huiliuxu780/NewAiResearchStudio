@@ -26,7 +26,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { PushRecordDiagnosticFilter, PushTaskRiskFilter } from "@/lib/push-console-utils";
+import type { PushRecordDiagnosticFilter, PushTaskDependencyFocus, PushTaskRiskFilter } from "@/lib/push-console-utils";
 import {
   useCreatePushTask,
   useDisablePushTask,
@@ -92,6 +92,8 @@ export default function PushPage() {
   const [taskStatusFilter, setTaskStatusFilter] = useState("all");
   const [taskEnabledFilter, setTaskEnabledFilter] = useState("all");
   const [taskRiskFilter, setTaskRiskFilter] = useState<PushTaskRiskFilter>("all");
+  const [taskDependencyFocus, setTaskDependencyFocus] = useState<PushTaskDependencyFocus | null>(null);
+  const [taskDependencyFocusName, setTaskDependencyFocusName] = useState<string | null>(null);
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
 
@@ -548,6 +550,8 @@ export default function PushPage() {
 
   function handleInspectTaskRecords(task: PushTask) {
     setFocusMode("none");
+    setTaskDependencyFocus(null);
+    setTaskDependencyFocusName(null);
     setRecordTaskFocus({ id: task.id, name: task.name });
     setRecordDiagnosticFilter("all");
     setRecordErrorCodeFilter("all");
@@ -559,6 +563,8 @@ export default function PushPage() {
 
   function handleInspectChannelRecords(channel: PushChannel) {
     setFocusMode("none");
+    setTaskDependencyFocus(null);
+    setTaskDependencyFocusName(null);
     setRecordTaskFocus(null);
     setRecordDiagnosticFilter("all");
     setRecordStatusFilter("all");
@@ -573,6 +579,24 @@ export default function PushPage() {
   async function handleTriggerTask(task: PushTask) {
     setTriggerTaskDraft(task);
     setTaskTriggerSheetOpen(true);
+  }
+
+  function handleInspectChannelTasks(channel: PushChannel) {
+    setFocusMode("none");
+    setTaskDependencyFocus({ type: "channel", id: channel.id });
+    setTaskDependencyFocusName(channel.name);
+    setTaskPage(1);
+    setTaskPageSize(100);
+    setActiveTab("tasks");
+  }
+
+  function handleInspectTemplateTasks(template: PushTemplate) {
+    setFocusMode("none");
+    setTaskDependencyFocus({ type: "template", id: template.id });
+    setTaskDependencyFocusName(template.name);
+    setTaskPage(1);
+    setTaskPageSize(100);
+    setActiveTab("tasks");
   }
 
   async function handleSubmitTaskTrigger(task: PushTask, data: TriggerPushTaskData) {
@@ -1074,6 +1098,7 @@ export default function PushPage() {
                   setChannelEditorOpen(true);
                 }}
                 onDeleteChannel={setDeletingChannel}
+                onInspectDependencyTasks={handleInspectChannelTasks}
                 onViewChannel={setSelectedChannel}
                 onToggleChannel={(channel) => void handleToggleChannel(channel)}
               />
@@ -1085,6 +1110,8 @@ export default function PushPage() {
                 taskStatusFilter={taskStatusFilter}
                 taskEnabledFilter={taskEnabledFilter}
                 taskRiskFilter={taskRiskFilter}
+                taskDependencyFocus={taskDependencyFocus}
+                taskDependencyFocusName={taskDependencyFocusName}
                 data={tasks.data}
                 channelOptions={taskEditorChannels.data?.items ?? []}
                 error={tasks.error}
@@ -1111,6 +1138,11 @@ export default function PushPage() {
                   setTaskRiskFilter(value);
                   setTaskPage(1);
                 }}
+                onClearTaskDependencyFocus={() => {
+                  setTaskDependencyFocus(null);
+                  setTaskDependencyFocusName(null);
+                  setTaskPage(1);
+                }}
                 onTaskPageChange={setTaskPage}
                 onTaskPageSizeChange={(size) => {
                   setTaskPageSize(size);
@@ -1133,6 +1165,8 @@ export default function PushPage() {
                 }}
                 onDeleteTask={setDeletingTask}
                 onInspectTaskRecords={handleInspectTaskRecords}
+                onInspectChannel={(channel) => setSelectedChannel(channel)}
+                onInspectTemplate={(template) => setDetailTemplate(template)}
                 onViewTask={setSelectedTask}
                 onToggleTask={(task) => void handleToggleTask(task)}
                 onTriggerTask={(task) => void handleTriggerTask(task)}
@@ -1266,6 +1300,7 @@ export default function PushPage() {
                   setTemplateEditorOpen(true);
                 }}
                 onDeleteTemplate={setDeletingTemplate}
+                onInspectDependencyTasks={handleInspectTemplateTasks}
                 onViewTemplate={setDetailTemplate}
                 onPreviewVariablesTextChange={setPreviewVariablesText}
                 onPreview={() => selectedTemplate && void handlePreviewTemplate(selectedTemplate)}
@@ -1297,6 +1332,10 @@ export default function PushPage() {
         onInspectRecords={(channel) => {
           setSelectedChannel(null);
           handleInspectChannelRecords(channel);
+        }}
+        onInspectDependencyTasks={(channel) => {
+          setSelectedChannel(null);
+          handleInspectChannelTasks(channel);
         }}
         onInspectTask={(task) => {
           setSelectedChannel(null);
@@ -1411,6 +1450,10 @@ export default function PushPage() {
           setEditingTemplate(null);
           setTemplateDraftSource(template);
           setTemplateEditorOpen(true);
+        }}
+        onInspectDependencyTasks={(template) => {
+          setDetailTemplate(null);
+          handleInspectTemplateTasks(template);
         }}
         onInspectTask={(task) => {
           setDetailTemplate(null);

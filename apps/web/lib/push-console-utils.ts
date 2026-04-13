@@ -32,6 +32,11 @@ export interface PushRecordErrorCodeOption {
   count: number;
 }
 
+export interface PushTaskDependencyFocus {
+  type: "channel" | "template";
+  id: string;
+}
+
 export type PushTaskRiskFilter = "all" | "risk" | "failing" | "dependency";
 export type PushRecordDiagnosticFilter = "all" | "retryable" | "error-code" | "retry-exhausted";
 
@@ -146,6 +151,18 @@ export function matchesTaskRiskFilter(summary: PushTaskRiskSummary, filter: Push
   }
 
   return summary.disabledTemplate || summary.disabledChannelCount > 0;
+}
+
+export function matchesTaskDependencyFocus(task: PushTask, focus: PushTaskDependencyFocus | null) {
+  if (!focus) {
+    return true;
+  }
+
+  if (focus.type === "channel") {
+    return task.channel_ids.includes(focus.id) || task.alert_channel_id === focus.id;
+  }
+
+  return task.template_id === focus.id;
 }
 
 export function matchesRecordDiagnosticFilter(record: PushRecord, filter: PushRecordDiagnosticFilter) {
